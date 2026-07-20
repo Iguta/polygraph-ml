@@ -1,54 +1,197 @@
 # Technical Design Document — PolygraphML
 
-**Version:** 1.0 · **Owner:** David · **Date:** July 18, 2026 · **Status:** Approved for build
+**Version:** 1.1 · **Owner:** David · **Date:** July 18, 2026 · **Status:** Approved foundation
 
 ## 1. Overview
 
-PolygraphML is a two-tier application: a Python FastAPI backend hosting the audit engine, and a React single-page dashboard. The audit engine is an agent loop in which GPT-5.6 plans and interprets while deterministic Python code executes probes and retraining. The critical design principle: **the model reasons, the code computes.** Every number shown to the user is computed by Python and injected into GPT-5.6 prompts as ground truth; GPT-5.6 never generates a metric.
+PolygraphML is an asynchronous React/FastAPI application that audits a trained model, evaluation data, and its training/evaluation pipeline as one evidence bundle. A single GPT-5.6 Sol agent plans and interprets the investigation; versioned Python tools reconstruct metrics, test hypotheses, and apply corrections.
 
-## 2. Components
+The central invariant is:
 
-**Intake service.** Parses uploaded CSVs with pandas, infers dtypes, computes per-feature summary statistics (cardinality, missingness, distribution sketch, sample values), and writes a `DatasetProfile`. Rejects files over 50 MB or without a valid target column.
+> **The model reasons; code computes; evidence decides.**
 
-**Semantic auditor (GPT-5.6).** One structured-output call per audit. Input: dataset profile, target description, optional time column, optional user-supplied business context. Output: per-feature `RiskAssessment` (risk level, suspected mechanism, rationale). Model: `gpt-5.6-sol` for this call (deepest reasoning step); cheaper tiers (`terra`/`luna`) for narration and report drafting. Temperature low; schema enforced via structured outputs; one retry on validation failure.
+The product must distinguish a semantic suspicion from a confirmed defect, an ablation impact from leakage proof, and a model reasoning summary from independently computed evidence.
 
-**Probe harness.** Deterministic Python implementations of the four core probes.
+## 2. Domain model
 
-| Probe | Method | Signal |
+| Entity | Responsibility |
+|---|---|
+| `Project` | Submission container, source type, pinned repository commit, retention policy |
+| `Artifact` | Dataset, model, notebook, code, manifest, checksum, media type, adapter status |
+| `Scenario` | Target, entity, decision time, horizon, split unit, metric, user assumptions |
+| `Audit` | Durable state machine, evaluator/model versions, status, result references |
+| `Question` | Material ambiguity, choices/free-text answer, blocking state, affected hypotheses |
+| `Hypothesis` | Suspected mechanism, assumptions, rationale summary, requested probe, falsifier |
+| `Evidence` | Deterministic observation with tool version, inputs, outputs, and provenance |
+| `Finding` | Lifecycle and conclusion tying hypotheses to evidence and correction |
+| `MetricComparison` | Reported, reproduced, and corrected metrics with protocol and tolerance |
+| `AuditEvent` | Ordered, sanitized Decision Trace record |
+| `Report` | Technical or stakeholder rendering of immutable audit results |
+
+Full transport shapes are defined in [API_CONTRACT.md](API_CONTRACT.md).
+
+## 3. Audit state machine
+
+```text
+draft
+  → validating
+  → queued
+  → reconstructing
+  → reproducing
+  → interrogating
+  → waiting_for_user ──answer──┐
+  → probing ◀──────────────────┘
+  → correcting
+  → composing
+  → complete
+```
+
+Any running state may transition to `failed_partial` when useful evidence exists or `failed` when intake prevents analysis. Transitions use conditional writes so duplicate SQS delivery cannot move an audit backward or repeat a committed correction.
+
+## 4. Intake and artifact adapters
+
+### Repository importer
+
+Accept a public GitHub URL and optional ref, resolve it to a commit SHA, enforce size/path limits, inventory files, and locate candidate notebooks, manifests, datasets, and models. Static inspection is always separate from execution.
+
+### Dataset adapters
+
+Initial adapters read CSV and Parquet, infer schema, summarize values, and expose chunked access. Profiles include row count, types, missingness, cardinality, samples, distribution sketches, target balance, entity/time coverage, and checksum. Raw rows are not sent to the model by default.
+
+### Model adapters
+
+- `SkopsAdapter`: supported scikit-learn estimators and preprocessing objects after type inspection.
+- `XGBoostInspector`: `.json` receives structural validation; `.ubj` is recognized but remains a limited/P1 execution path.
+- `OnnxDescriptor`: recognizes ONNX evidence and labels it limited; inference equivalence is P1 and requires explicit preprocessing metadata.
+- `UnsupportedAdapter`: preserves metadata and reason so partial notebook/repository auditing can continue.
+
+Arbitrary JSON is never assumed to be a model. Pickle, joblib, and cloudpickle are denied at validation.
+
+### Notebook/pipeline parser
+
+Parse `.ipynb` and Python source without executing it to identify imports, data reads, split calls, preprocessing fit/transform order, training calls, metric calculations, printed claims, seeds, and source locations. A `polygraphml.yaml` manifest can resolve ambiguity but cannot override security policy.
+
+## 5. Scenario and follow-up questions
+
+The `Scenario` is part of the audit input, not report decoration. Before confirming an availability or temporal finding, the agent must know—or explicitly mark unknown—the decision point and prediction horizon. Questions are emitted only when the answer could change the investigation.
+
+The agent returns a structured `QuestionRequest` containing:
+
+- concise question;
+- why it matters;
+- affected hypotheses;
+- expected answer type;
+- safe default, if any;
+- whether the audit can continue in parallel.
+
+Answers are immutable events. Any revised answer creates a new scenario revision and triggers reevaluation of affected findings.
+
+## 6. Agent design
+
+The MVP uses one `AuditAgent` implemented with the OpenAI Agents SDK and explicitly configured with `gpt-5.6-sol`. Its initial typed, read-only tools cover:
+
+- artifact and scenario inspection;
+- sanitized dataset-profile inspection;
+- static notebook-summary inspection;
+- supported-probe discovery.
+
+The structured plan can request a supported probe and propose one question, while application code owns probe execution, correction, finding transitions, and reports. P0 validates that the primary live hypothesis is `post_outcome`, requests `feature_availability`, and names only a feature from reconstructed model feature order; unsupported output degrades visibly instead of being reinterpreted. The agent cannot write metric values directly. Structured model outputs are validated and bounded by a five-turn limit; a failure degrades to the deterministic fixture plan with an explicit warning event.
+
+No multi-agent handoffs are required for the MVP. A second agent is justified only if benchmark evaluation demonstrates a measurable quality, latency, or maintainability improvement.
+
+## 7. Reproduction engine
+
+The engine seeks the closest safe reproduction tier:
+
+1. **Exact supported reconstruction:** safe adapter plus parsed evaluation protocol can rerun the submitted model.
+2. **Controlled pipeline reconstruction:** PolygraphML rebuilds the split/preprocessing/evaluation from declared evidence.
+3. **Reference challenger:** when the user artifact cannot run, a versioned baseline estimates dataset-level effects without pretending to reproduce the submitted model.
+4. **Static-only review:** code and scenario issues are reported, but metric reproduction is marked unavailable.
+
+The tier is visible in every metric comparison. Reproducibility captures source commit, artifact hashes, library versions, seed, split indices or hashes, feature order, and evaluator version.
+
+## 8. Deterministic probe suite
+
+| Probe | Evidence | Initial method |
 |---|---|---|
-| Single-feature power | Per-feature model (decision stump / univariate logistic) AUC vs. target on a held-out split | AUC > threshold (default 0.85) flags target proxy |
-| Contamination | Exact and near-duplicate rows (hash + MinHash) across train/test split | Any cross-split duplication flags contamination |
-| Temporal ordering | With a time column: feature availability vs. outcome timestamp; correlation of feature with future windows | Feature knowable only post-outcome flags temporal leak |
-| Proxy correlation | Normalized mutual information feature↔target | NMI above adaptive threshold flags proxy |
+| Reported metric extraction | Claim and source location | Notebook output/AST/manifest parsing |
+| Metric reconstruction | Reproduced score and tolerance | Versioned evaluator on preserved split |
+| Single-feature power | Held-out predictive signal | Ablation/correction on the reconstructed model; broader univariate probes are P1 |
+| Exact duplication | Cross-split overlap | Stable row hashes |
+| Group contamination | Entity overlap | Group IDs across split membership |
+| Post-outcome availability | Feature unavailable at decision time | Scenario answer plus feature correction |
+| Temporal backtesting | Future-window contamination | P1; surfaced as an unsupported limitation |
+| Target proxy | Implausible target association | P1; surfaced as an unsupported limitation |
+| Preprocessing leakage | Fit before split/fold | Static pipeline inspection and reconstructed comparison |
+| Ablation | Model reliance and impact | Reevaluate/retrain without suspect feature set |
+| Corrected evaluation | Honest protocol result | Smallest justified split/preprocessing/feature repair |
 
-Each probe returns an `Evidence` object; probes run in a worker with a hard timeout.
+Thresholds are configuration and benchmark data, not universal truths. Probe output includes limitations and cannot promote a finding by itself unless the finding policy explicitly allows it.
 
-**Ablation prover.** For each suspect set, trains baseline models (logistic regression and XGBoost, fixed seeds, stratified split) on all features, then retrains excluding the suspects, and records `baseline_metric`, `ablated_metric`, `delta`. Uses small demo-scale data so each retrain is O(seconds). A suspect graduates to **Proven** only if delta exceeds a materiality threshold (default 5 points of AUC/accuracy) — this is what keeps false accusations out.
+## 9. Finding policy
 
-**Verdict composer (GPT-5.6).** Receives the full computed findings and writes the interrogation narrative and the stakeholder report. All quantitative values are templated in; the model supplies mechanism explanations and business translation only.
+Statuses are `needs_context`, `suspected`, `tested`, `confirmed`, `cleared`, and `inconclusive`.
 
-**Event stream.** The audit runs as an async task; every state transition (profiling, suspicion raised, probe started/finished, proof running, proof result, verdict) is pushed to the client over SSE, giving the live-narration UX.
+A finding may become `confirmed` only when:
 
-## 3. Agent loop
+1. the scenario and mechanism are sufficiently established;
+2. at least one deterministic evidence item supports the mechanism;
+3. the impact is measured on a valid evaluation protocol, or the finding type is intrinsically protocol-invalidating and the limitation is stated;
+4. contradictory evidence is recorded and resolved;
+5. the conclusion states what could change it.
 
-The loop is intentionally simple and inspectable rather than autonomous: `profile → semantic audit → probe suspects → ablate confirmed suspects → compose verdict`. GPT-5.6 makes two kinds of decisions inside the loop: which probes apply to which features (the probe plan), and how to interpret ambiguous probe results (e.g., high single-feature AUC on a plausibly legitimate feature triggers a follow-up ablation rather than an accusation). Implemented with the OpenAI Agents SDK; each step is a typed tool with logged inputs/outputs so the full session is auditable — which doubles as demo material.
+A large ablation delta establishes model reliance, not necessarily leakage. A small delta can still reveal a real defect with limited aggregate impact. Severity, confidence, and status are separate fields.
 
-## 4. Data model
+## 10. Decision Trace
 
-Core entities (full JSON schemas in [API_CONTRACT.md](API_CONTRACT.md)): `Dataset` (id, profile, target, time_column), `Audit` (id, dataset_id, status, findings[], proofs[], verdict), `Finding` (feature(s), type ∈ {target_proxy, post_outcome, contamination, temporal, identifier}, severity, confidence, rationale, evidence[], status ∈ {suspected, probed, proven, cleared}), `Proof` (features, model, baseline_metric, ablated_metric, delta, verdict). Persistence is a per-session directory of JSON files — no database for the MVP.
+The user-visible trace is an application-owned event log, not a mirror of private model state. Event types include:
 
-## 5. Synthetic evaluation suite
+`audit_state`, `assumption`, `question`, `answer`, `hypothesis`, `tool_started`, `tool_result`, `evidence`, `correction`, `finding_changed`, `reasoning_summary`, `warning`, `retry`, `error`, and `verdict`.
 
-Ground truth is manufactured, not assumed. A generator script produces datasets with planted leaks of each type: a direct target proxy (target + noise), a post-outcome field (populated only for positive class), cross-split duplicates, a temporal bleed (feature computed from a post-outcome window), and an identifier leak — plus one fully clean dataset. The pytest suite asserts every planted leak is detected and proven, and that the clean dataset produces zero Proven findings. This suite is Codex-authored and is the centerpiece of the hackathon's "genuine technical effort" story.
+Each event includes event ID, audit ID, monotonic sequence, timestamp, actor (`user`, `agent`, `tool`, `system`), public payload, and provenance references. Developer traces may contain additional operational data but are sanitized independently and are not exposed directly to users.
 
-## 6. Key design decisions
+## 11. Queue, persistence, and idempotency
 
-Local training over SageMaker: demo latency and self-containment beat cloud credibility theater; SageMaker is documented as roadmap. Baseline-model ablation over user-model introspection: retraining our own baselines makes proofs uniform, fast, and model-agnostic; pickled-model support is a stretch. Structured outputs everywhere: a malformed model response must be impossible to render. Materiality threshold on proofs: detection sensitivity is worthless if the tool cries wolf; the threshold plus the clean-dataset test enforces precision.
+The API writes audit state before enqueueing. An SQS message contains `audit_id`, operation, schema version, and idempotency key. The worker acquires a conditional lease in DynamoDB, checkpoints after each committed step, extends visibility while active, and deletes the message only after a terminal or intentionally paused checkpoint.
 
-## 7. Error handling and failure modes
+Question pauses do not hold an SQS message indefinitely. The worker persists `waiting_for_user`, releases the job, and an answer enqueues a resume operation. Exhausted retryable failures enter the DLQ and raise an operational alarm.
 
-Probe timeout marks the finding `probed` with partial evidence rather than failing the audit. GPT-5.6 schema-validation failure retries once, then degrades to statistical-only findings with a visible notice. Retrain failure on a suspect surfaces the finding as `suspected` with the error attached. The SSE channel reconnects with resume-from-last-event. The audit as a whole must never hard-fail on a single component: partial verdicts are always renderable.
+Artifacts and large results live in S3. DynamoDB stores metadata, current state, ordered events, and immutable references. S3 object keys are content- or audit-addressed so retries do not create divergent outputs.
 
-## 8. Testing strategy
+## 12. Security design
 
-Unit tests cover each probe against hand-constructed micro-datasets; the synthetic suite covers the end-to-end engine; a Playwright smoke test covers upload → interrogate → verdict on the demo dataset. Target for the hackathon: the synthetic suite green plus the Playwright path green constitutes "demo-ready." Codex generates and maintains all three layers, with the session log preserved as evidence.
+- API and coordinator containers never load remote pickle-like objects.
+- The OpenAI key is read from Secrets Manager only by the coordinator role.
+- Submitted code, if execution is enabled, runs in a separate disposable task with no secrets and restricted egress.
+- Presigned URLs are short-lived, scoped to one project prefix, and constrained by validated metadata.
+- Archive uploads are rejected outright in P0, before extraction. Member validation rejects absolute paths, parent traversal, symlinks, and device files for future bundle support.
+- Logs default to metadata only; raw dataset rows, prompts, tool data, and reasoning summaries are excluded unless explicitly sanitized.
+- Anonymous demo sessions are rate-limited and quota-bound.
+
+## 13. Failure behavior
+
+- A failed OpenAI call does not erase completed deterministic work.
+- A probe timeout yields `inconclusive` with partial evidence.
+- An unsupported artifact yields a lower reproduction tier, not a fabricated result.
+- SSE loss triggers event replay or polling.
+- Duplicate SQS delivery is a no-op after the matching checkpoint.
+- A correction failure preserves the original and reproduced metrics and explains why corrected performance is unavailable.
+
+## 14. Testing and evaluation
+
+### Software tests
+
+- Unit tests for adapters, parsers, probes, finding policy, state transitions, and sanitization.
+- Parametrized tests for archive/path validation and idempotency invariants.
+- Contract tests for API envelopes, events, and structured model outputs.
+- Integration tests for S3/DynamoDB/SQS behavior using local substitutes or an isolated AWS environment.
+- Playwright tests for benchmark intake, follow-up pause/resume, fixture trace, verdict/report, refresh recovery, accessibility, and responsive layouts.
+
+### Audit-quality benchmarks
+
+- Synthetic micro-datasets with one planted mechanism each.
+- Multi-leak synthetic cases and a fully clean control.
+- Public repository/notebook/model cases with pinned artifacts and predeclared expected findings.
+- A licensed UCI COVID-19 surveillance clean control with explicit non-clinical claim boundaries.
+
+Quality reporting includes confirmed-finding precision/recall, false confirmations on clean controls, reproduction error, corrected-metric error, question usefulness, latency, token usage, and cost. A benchmark failure cannot be hidden by changing the expected answer after the run.

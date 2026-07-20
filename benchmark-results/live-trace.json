@@ -1,0 +1,34 @@
+{
+  "actor_counts": {
+    "agent": 3,
+    "system": 13,
+    "tool": 6,
+    "user": 1
+  },
+  "audit_id": "aud_01KXYJE9A5RX24HTA705VQMK26",
+  "confirmed_mechanisms": [
+    "group_contamination"
+  ],
+  "created_at": "2026-07-20T01:32:57.379748Z",
+  "event_count": 23,
+  "event_type_counts": {
+    "answer": 1,
+    "audit_state": 8,
+    "evidence": 4,
+    "finding_changed": 4,
+    "hypothesis": 1,
+    "question": 1,
+    "reasoning_summary": 1,
+    "tool_result": 2,
+    "verdict": 1
+  },
+  "final_status": "complete",
+  "last_event_sequence": 23,
+  "mode": "live",
+  "model": "gpt-5.6-sol",
+  "payloads_included": false,
+  "raw_chain_of_thought_stored": false,
+  "reproduction_tier": "exact_supported",
+  "schema_version": "1",
+  "trace_include_sensitive_data": false
+}

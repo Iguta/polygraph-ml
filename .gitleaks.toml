@@ -1,0 +1,8 @@
+title = "PolygraphML secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignored local runtime state and deterministic test databases"
+paths = ['''(^|/)\.polygraphml-data/''']

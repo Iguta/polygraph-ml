@@ -1,0 +1,89 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "polygraphml"
+version = "0.1.0"
+description = "Evidence-backed QA for machine learning systems"
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+license = { text = "MIT" }
+authors = [{ name = "David" }]
+dependencies = [
+    "boto3==1.43.51",
+    "fastapi==0.139.2",
+    "httpx==0.28.1",
+    "nbformat==5.10.4",
+    "openai==2.46.0",
+    "openai-agents==0.18.3",
+    "orjson==3.11.9",
+    "pandas==3.0.3",
+    "pyarrow==25.0.0",
+    "pydantic==2.13.4",
+    "pydantic-settings==2.14.2",
+    "python-multipart==0.0.32",
+    "pyyaml==6.0.3",
+    "scikit-learn==1.9.0",
+    "skops==0.14.0",
+    "ulid-py==1.1.0",
+    "uvicorn[standard]==0.51.0",
+]
+
+[project.scripts]
+polygraphml-api = "polygraphml.api.main:run"
+polygraphml-worker = "polygraphml.worker.main:run"
+polygraphml-benchmarks = "polygraphml.benchmarks.evaluate:main"
+polygraphml-queue-calibration = "polygraphml.operations.queue_timing:main"
+polygraphml-live-smoke = "polygraphml.operations.live_trace:main"
+polygraphml-deployed-smoke = "polygraphml.operations.deployed_smoke:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/polygraphml"]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers --strict-config"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["polygraphml"]
+omit = ["src/polygraphml/operations/deployed_smoke.py"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF", "ASYNC", "S"]
+ignore = ["S101", "B008", "E501", "S104"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["polygraphml"]
+
+[[tool.mypy.overrides]]
+module = ["boto3", "boto3.*", "botocore", "botocore.*", "pandas", "pandas.*", "sklearn.*", "skops", "skops.*", "nbformat", "nbformat.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["polygraphml.adapters.notebooks", "polygraphml.benchmarks.catalog"]
+disable_error_code = ["no-untyped-call"]
+
+[dependency-groups]
+dev = [
+    "hypothesis==6.156.9",
+    "mypy==2.3.0",
+    "moto[dynamodb,s3]==5.2.2",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pytest-cov==7.1.0",
+    "ruff==0.15.22",
+    "types-pyyaml==6.0.12.20260518",
+]

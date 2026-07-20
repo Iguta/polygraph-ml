@@ -12,14 +12,18 @@ venv/
 node_modules/
 dist/
 .vite/
+test-results/
+playwright-report/
 
 # Env & secrets
 .env
 .env.*
+frontend/.vercel/
 !.env.example
 
 # Session data & artifacts
 data/sessions/
+.polygraphml-data/
 *.pkl
 *.joblib
 
@@ -27,3 +31,11 @@ data/sessions/
 .DS_Store
 .idea/
 .vscode/
+
+# Terraform local state and provider cache
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example

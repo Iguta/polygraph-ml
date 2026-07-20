@@ -1,0 +1,76 @@
+{
+  "aggregate": {
+    "cost_note": "Fixture evaluation makes no OpenAI API call.",
+    "estimated_openai_cost_usd": 0.0,
+    "false_confirmations": 0,
+    "false_negatives": 0,
+    "latency_seconds": 0.1984,
+    "max_corrected_metric_error": 0.0,
+    "openai_tokens": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "true_positives": 4
+  },
+  "cases": [
+    {
+      "benchmark_id": "synthetic_campaign_leak_v1",
+      "corrected_metric": 0.8627956989247312,
+      "corrected_metric_error": 0.0,
+      "expected_confirmed": [
+        "group_contamination",
+        "post_outcome"
+      ],
+      "false_confirmations": [],
+      "latency_seconds": 0.0755,
+      "license": "CC0-1.0",
+      "observed_confirmed": [
+        "group_contamination",
+        "post_outcome"
+      ],
+      "reproduction_error": 0.0
+    },
+    {
+      "benchmark_id": "synthetic_post_outcome_only_v1",
+      "corrected_metric": 0.8627956989247312,
+      "corrected_metric_error": 0.0,
+      "expected_confirmed": [
+        "post_outcome"
+      ],
+      "false_confirmations": [],
+      "latency_seconds": 0.0486,
+      "license": "CC0-1.0",
+      "observed_confirmed": [
+        "post_outcome"
+      ],
+      "reproduction_error": 0.0
+    },
+    {
+      "benchmark_id": "synthetic_group_contamination_only_v1",
+      "corrected_metric": null,
+      "corrected_metric_error": null,
+      "expected_confirmed": [
+        "group_contamination"
+      ],
+      "false_confirmations": [],
+      "latency_seconds": 0.0365,
+      "license": "CC0-1.0",
+      "observed_confirmed": [
+        "group_contamination"
+      ],
+      "reproduction_error": 0.0
+    },
+    {
+      "benchmark_id": "uci_covid_surveillance_clean_v1",
+      "corrected_metric": null,
+      "corrected_metric_error": null,
+      "expected_confirmed": [],
+      "false_confirmations": [],
+      "latency_seconds": 0.035,
+      "license": "CC BY 4.0",
+      "observed_confirmed": [],
+      "reproduction_error": 0.0
+    }
+  ],
+  "mode": "fixture",
+  "schema_version": "1"
+}

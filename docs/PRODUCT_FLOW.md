@@ -1,31 +1,103 @@
 # Product Flow — PolygraphML
 
-**Version:** 1.0 · One screen, five states. The product is a single-page dashboard that transforms in place — the user never navigates.
+**Version:** 1.1 · **Experience:** one responsive React workspace with seven progressive states
 
-## State 1 — Landing / Intake
+The product transforms in place so the user retains context. A compact stepper and persistent project header provide orientation without turning the experience into a long configuration wizard.
 
-The user sees the product promise ("The lie detector for machine learning models"), a drop zone, and a sample-dataset shortcut ("Try it on a leaky churn model") that pre-loads the demo CSV. On upload, a compact schema table appears with dropdowns for **Target column** and optional **Time column**, plus an optional one-line business-context field ("This is a SaaS churn dataset"). A single primary button: **Interrogate**. Design intent: zero onboarding — a first-time judge must reach the button in under ten seconds.
+## State 1 — Choose evidence
 
-## State 2 — Interrogation (live)
+The landing view leads with the promise: **“Find out whether your model earned its score.”** Three clear actions are offered:
 
-The centerpiece. The screen splits: the left rail lists every feature as a chip (neutral gray), and the main panel streams the agent's narration as a live transcript. As the semantic audit lands, chips recolor — amber for suspects, green for cleared — and narration entries voice the reasoning: *"`last_payment_status` contains values like 'chargeback' that typically post-date cancellation. Flagging as a suspected post-outcome leak."* Probe activity renders inline with mini progress bars per probe. Emotional target: the user is watching an expert think, not waiting on a spinner.
+1. **Audit a GitHub repository** — enter a public repository URL and optional branch/tag/commit.
+2. **Upload model evidence** — upload dataset, model artifact, and optional notebook/manifest.
+3. **Try a benchmark** — open a curated, fully reproducible example.
 
-## State 3 — Proof (the moment)
+Each choice explains what a complete audit requires. Dataset-only uploads are labeled **Dataset preflight**, not presented as full model audits. The primary demo reaches source selection within ten seconds.
 
-When a suspect enters ablation, the main panel foregrounds a proof card: the baseline metric displayed large (e.g., **AUC 0.982**), a "retraining without `last_payment_status`…" progress state lasting a few visible seconds, then the ablated metric animating downward to **0.714** with the delta stamped in red. The suspect's chip turns red (**Proven**). This collapse animation is the product's wow moment and the demo's centerpiece; it must be smooth, legible at a glance, and honest (numbers come straight from the `Proof` object).
+## State 2 — Review artifact map
 
-## State 4 — Verdict
+PolygraphML displays the detected evidence as cards:
 
-The transcript collapses into a summary header: claimed performance vs. honest performance side-by-side, a severity-ranked findings table (feature, type, mechanism in one sentence, evidence link, status), and cleared features listed affirmatively ("6 features interrogated and cleared"). Each finding expands to its full rationale and evidence. Primary action: **Generate stakeholder report**; secondary: **Download findings (JSON)**, **Run again**.
+- dataset and candidate target;
+- model format and adapter status;
+- notebook/pipeline and likely training/evaluation cells;
+- reported metric and source location;
+- source commit and artifact checksums.
 
-## State 5 — Report
+Ambiguous or missing mappings are visually obvious and editable. Unsupported artifacts remain listed with a reason and a safe next step. A remote pickle is rejected here, before any execution path.
 
-A rendered markdown report in an elegant reading layout: an executive summary in business language ("The model's reported 98% is not real…"), the honest performance estimate, per-finding explanations translated for non-technical readers, and recommended next steps (remove features X and Y, retrain, re-audit). Actions: copy, download `.md`, and — if the stretch lands — send by email. The report ends with the audit's session ID and timestamp for traceability.
+## State 3 — Define the prediction scenario
+
+The user confirms a concise scenario contract:
+
+- What does one row represent?
+- What outcome is predicted?
+- At what moment must the prediction be available?
+- What is the prediction horizon?
+- What entity/group must not cross evaluation splits?
+- Which metric should determine success?
+
+Known values are prefilled from the notebook or manifest. The purpose is explained in one sentence: **the same feature can be valid or leakage depending on when the prediction is made.** The main action is **Start audit**.
+
+## State 4 — Queued and reconstructing
+
+The API returns immediately after creating the SQS job. The UI shows a durable audit ID and the concrete first steps: importing artifacts, profiling, locating evaluation code, and reproducing the claim. A browser refresh reconnects to the same audit.
+
+This state never uses an unexplained spinner. Every step is either pending, running, complete, needs input, or failed with a recoverable explanation.
+
+## State 5 — Live Decision Trace
+
+The main workspace splits into:
+
+- a feature/source rail showing current statuses;
+- a timeline of structured audit events;
+- a contextual evidence drawer.
+
+Timeline cards are explicitly typed: **Assumption**, **Hypothesis**, **Probe**, **Observation**, **Correction**, or **Conclusion**. A hypothesis states the concise rationale, what will be tested, and what would disprove it. Probe cards show actual tool inputs and results. Source references open the relevant notebook cell, file, column, or artifact metadata.
+
+The product does not label this view “chain-of-thought.” It shows a sanitized, user-auditable decision trace. Optional OpenAI reasoning summaries may supply concise narration, but are visually distinct from computed evidence.
+
+### Human-in-the-loop pause
+
+When a missing scenario fact could change the conclusion, the trace pauses with one focused question. For example:
+
+> “Is `call_duration` available when the campaign decides whom to call, or only after the call finishes?”
+
+The user answer is recorded as an event, affected hypotheses are reevaluated, and the same SQS-backed audit resumes. The rest of the page remains inspectable while paused.
+
+## State 6 — Correction and comparison
+
+For a confirmed defect, a comparison card shows:
+
+- **Reported** metric from the submitted evidence;
+- **Reproduced** metric from PolygraphML’s reconstruction;
+- **Corrected** metric after the smallest justified repair.
+
+The animation may dramatize the change, but the labels, evaluation split, confidence/tolerance, and correction must remain visible. Feature ablation alone is shown as impact evidence; it becomes a confirmed leakage finding only when paired with mechanism evidence such as unavailable-at-decision-time or cross-split contamination.
+
+## State 7 — Verdict and report
+
+The final workspace includes:
+
+- a trust summary with reported/reproduced/corrected metrics;
+- findings ranked by severity and status;
+- assumptions and unresolved questions;
+- cleared checks and unsupported checks;
+- reproducibility metadata;
+- **Download JSON**, **Generate stakeholder report**, and **Run another audit** actions.
+
+Every finding expands into a trace from hypothesis to evidence to correction, including “What would change this conclusion?” A fully clean result is a first-class success state: **“No tested leakage mechanism was confirmed under the stated scenario.”** It never overclaims universal safety.
 
 ## Error and edge flows
 
-A malformed CSV returns the user to State 1 with a specific message ("Column count varies at row 1,204"). A probe timeout leaves the finding visible as *Suspected — probe incomplete* rather than blocking the verdict. A model-output validation failure downgrades gracefully: statistical findings render with a notice that semantic rationale is unavailable. A fully clean dataset is a first-class flow, not an empty state: the verdict celebrates it ("No leakage proven. Claimed performance stands.") — this is also a demo beat, shown briefly to establish that Polygraph doesn't cry wolf.
+- A malformed or oversized artifact returns to the mapping state with a specific remediation.
+- An unsupported model can still receive repository/notebook analysis, but the UI clearly marks model-level reproduction as unavailable.
+- A model-call failure leaves deterministic results visible and offers a bounded retry.
+- A probe timeout produces an `inconclusive` result rather than a false clearance or confirmation.
+- An SQS retry does not duplicate events or corrections; the UI may display the retry count.
+- A disconnected SSE stream falls back to polling and resumes from the last event ID.
+- A missing API key disables live semantic analysis with a clear configuration notice; benchmark fixtures and deterministic UI flows remain usable in development.
 
-## Flow ↔ demo mapping
+## Demo mapping
 
-State 1 covers demo 0:20–0:35, State 2 covers 0:35–1:10, State 3 covers 1:10–1:35 (the wow moment), State 4–5 cover 1:35–1:50, leaving the architecture reveal and closing per [DEMO_SCRIPT.md](DEMO_SCRIPT.md). Every state must therefore be individually screenshot-worthy — the video will linger on each for only seconds.
+The hackathon video emphasizes State 1–3 briefly, spends most of its time in the live Decision Trace and correction comparison, and lands on the verdict. Each state must be screenshot-worthy, keyboard accessible, and legible at 1080p recording scale.

@@ -1,0 +1,15 @@
+{
+  "case_count": 20,
+  "configured_covers_measurement": true,
+  "configured_heartbeat_seconds": 60.0,
+  "configured_visibility_seconds": 300,
+  "limitations": [],
+  "measurement_mode": "live",
+  "observed_max_seconds": 36.968,
+  "observed_p95_seconds": 32.666,
+  "production_calibrated": true,
+  "recommended_visibility_seconds": 161,
+  "safety_multiplier": 4.0,
+  "schema_version": "1",
+  "startup_allowance_seconds": 30
+}

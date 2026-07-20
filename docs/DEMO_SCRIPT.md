@@ -1,34 +1,91 @@
-# Demo Script — PolygraphML (3:00 max, target 2:50)
+# Demo Script — PolygraphML
 
-**Opening line, verbatim:**
-> "PolygraphML is the lie detector for machine learning models — it interrogates your model, catches it cheating, and proves it by retraining without the leaked evidence."
+**Maximum:** 3:00 · **Target:** 2:45–2:50 · **Status:** deployed path and live-agent evidence verified; final polished recording still required
 
-## 0:00–0:20 — Hook and problem
+## Opening line
 
-On screen: a training notebook cell proudly printing `AUC: 0.982`. Voiceover: "This churn model just scored 98%. Would you ship it? Princeton researchers found data leakage invalidating research across seventeen fields, and an entire generation of COVID diagnostic models was rendered clinically useless by exactly this failure. AutoML made building models cheap — nobody built the QA layer. I spent two years as a software engineer in test. This is Polygraph."
+> “PolygraphML is the evidence-backed lie detector for machine learning systems. It audits the model, data, and notebook together—and shows the score the model actually earned.”
 
-## 0:20–1:50 — Live product workflow
+## 0:00–0:20 — The problem
 
-0:20–0:35 — Upload the churn CSV, pick the target, one click on **Interrogate**. No configuration, no setup.
+Show the campaign benchmark notebook reporting ROC AUC `1.000`.
 
-0:35–1:10 — The interrogation streams. Feature chips flip amber and green as the agent narrates its suspicions out loud; pause on the key line: *"`last_payment_status` contains values like 'chargeback' that post-date cancellation — flagging as a post-outcome leak."* Point out a legitimate-looking feature getting **cleared** green: "Notice it doesn't cry wolf — `monthly_spend` is genuinely predictive, and Polygraph clears it."
+“This model reports AUC 1.000. But a metric is only as trustworthy as the data, split, preprocessing, and moment of prediction behind it. Auditing the CSV alone cannot answer that. PolygraphML reconstructs the whole claim.”
 
-1:10–1:35 — **The wow moment.** The proof card: baseline **0.982** on screen, "retraining without the leaked feature…", and the metric collapses live to **0.714**. Beat of silence. "That's not an opinion. That's an experiment. The model was cheating, and Polygraph just proved it."
+## 0:20–0:48 — Submit real evidence
 
-1:35–1:50 — The verdict panel and one scroll of the stakeholder report: "…and it hands your VP the honest number in plain English."
+Open **Try a benchmark** or paste the pinned public GitHub repository. Show the artifact map detecting:
 
-## 1:50–2:30 — Technical and AI differentiation
+- the notebook and metric cell;
+- the evaluation dataset;
+- the safe model artifact;
+- the target and split logic;
+- the exact source commit.
 
-Split screen: architecture diagram + a snippet of the agent session log. "The core is a division of labor: GPT-5.6 reasons — about what each feature *means* and *when it could have been known*, which no statistical test can do — while deterministic Python computes every number. GPT-5.6 never invents a metric; it interprets proofs. And Codex built this end to end: the probe harness, the retraining sandbox, and a synthetic test suite of datasets with *planted* leaks — so Polygraph is itself tested against ground truth. The session ID is in the README."
+Confirm the scenario: predictions select customers before a campaign call begins.
 
-## 2:30–3:00 — Result, impact, closing
+“The scenario matters. The same feature may be legitimate after a call and leakage before it.”
 
-"Deepchecks validates your data. AutoML builds your model. Nothing validates what the model *learned* — until now. Churn, credit, predictive maintenance, medicine: everywhere accuracy matters, leakage is shipping silently. Polygraph is the adversarial QA engineer for machine learning — leakage today; robustness, drift, and fairness next. Two years breaking software taught me one thing: everything ships with bugs until something is paid to find them. PolygraphML." End card: repo URL + tagline.
+## 0:48–1:35 — Watch the Decision Trace
 
-## Production notes
+Start the audit. Briefly point out that it is queued durably through SQS and survives refresh.
 
-Record against localhost with the synthetic churn dataset (planted leaks: `last_payment_status` post-outcome, `days_to_renewal_notice` temporal; clean control: `monthly_spend`). Rehearse until the live path is boring; keep one fully recorded clean take as fallback. The proof-card collapse must land between 1:10 and 1:35 — if audit latency drifts, trim narration in 0:35–1:10, never the proof. Mute notifications, 1080p, cursor highlighting on, no dead air over 2 seconds.
+The trace shows:
 
-## The one-slide summary (if a pitch slide is allowed)
+1. **Reported metric:** extracted from the notebook.
+2. **Reproduction:** the submitted evaluation reruns within tolerance.
+3. **Hypothesis:** `call_duration` may be unavailable at decision time.
+4. **Falsification condition:** the concern disappears if prediction occurs after the completed call.
 
-Claimed 0.982 → Honest 0.714, with the strapline: **"AutoML gives you a model. Polygraph tells you whether to trust it."**
+Let PolygraphML ask:
+
+> “Is `call_duration` available when customers are selected, or only after the call finishes?”
+
+Answer **after the call**. Show the answer becoming part of the audit evidence, followed by the deterministic availability and ablation/correction probes.
+
+“This is not hidden chain-of-thought. It is an audit trail: assumptions, hypotheses, tests, evidence, and corrections.”
+
+## 1:35–1:58 — The proof moment
+
+Show the captured fixture comparison:
+
+```text
+Reported   1.000
+Reproduced 1.000
+Corrected  0.863
+```
+
+“The headline score was real under the submitted evaluation, but invalid for the stated decision moment. PolygraphML removed the unavailable signal, repaired the evaluation, and measured the impact. Feature reliance alone is not called leakage—the scenario and code evidence complete the case.”
+
+Expand the finding so the judge sees source references and **What would change this conclusion?** Briefly show one legitimate feature or clean check being cleared.
+
+## 1:58–2:30 — Technical differentiation
+
+Show the architecture and a compact trace schema.
+
+“OpenAI GPT-5.6 Sol is the investigator. Through the OpenAI Agents SDK it forms falsifiable hypotheses, selects typed tools, and asks the question a static checker cannot. Deterministic Python computes every number. SQS makes the audit durable, DynamoDB stores the trace, and untrusted artifacts never execute in the API process. The React experience is deployed on Vercel; the backend runs on AWS.”
+
+Show the public UCI COVID-19 surveillance clean-control result: zero confirmed findings and zero reproduction error. State clearly that it is a 14-row teaching dataset, not clinical validation.
+
+“The auditor is itself evaluated: planted leaks, clean controls, and pinned public model-plus-data cases with expectations declared in advance.”
+
+## 2:30–2:50 — Close
+
+Show the stakeholder report and end card.
+
+“AutoML helps you build a model. PolygraphML tells you whether to trust what it learned. Leakage is the first audit family; robustness, drift, fairness, and continuous deployment gates come next. PolygraphML—the QA layer for machine learning.”
+
+## Recording rules
+
+- Use the checked-in `benchmark-results/latest.json` values; rerun the gate immediately before recording.
+- Display a live badge only during an actual live run; a fixture fallback must be labeled.
+- Record against `https://polygraphml.davidiguta.com` and keep a complete local recording as contingency.
+- Hide browser developer tools, secrets, presigned URLs, account identifiers, and AWS console details.
+- Keep the primary proof card on screen long enough to read at 1080p.
+- Do not make a clinical claim in the COVID case study. If that benchmark is not fully reproducible and licensed before recording, leave it in the roadmap/benchmark gallery rather than the main demo.
+
+## One-slide summary
+
+**Reported → Reproduced → Corrected**, with the strapline:
+
+> “A model score is a claim. PolygraphML audits the evidence.”
