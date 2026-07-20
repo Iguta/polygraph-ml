@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from polygraphml.domain.ids import new_id
 from polygraphml.domain.models import (
     Actor,
@@ -129,7 +131,7 @@ class AuditService:
     def _enqueue_if_queued(self, audit: Audit) -> bool:
         if audit.status != AuditStatus.QUEUED:
             return False
-        operation = (
+        operation: Literal["start", "resume"] = (
             "resume" if audit.question_ids and audit.checkpoint == "enqueue_pending" else "start"
         )
         key = (

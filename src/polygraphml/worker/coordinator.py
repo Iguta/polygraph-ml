@@ -5,6 +5,7 @@ import logging
 from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
+from typing import Literal
 
 from polygraphml.adapters.datasets import TabularDatasetAdapter
 from polygraphml.adapters.notebooks import NotebookInspector
@@ -146,7 +147,7 @@ class AuditCoordinator:
                 or age < self.settings.enqueue_recovery_seconds
             ):
                 continue
-            operation = (
+            operation: Literal["start", "resume"] = (
                 "resume"
                 if audit.question_ids and audit.checkpoint == "enqueue_pending"
                 else "start"
