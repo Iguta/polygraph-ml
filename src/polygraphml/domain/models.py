@@ -296,7 +296,8 @@ class Finding(StrictModel):
 class MetricValue(StrictModel):
     value: float
     provenance: str
-    protocol_id: str | None = None
+    protocol_id: str = Field(min_length=1)
+    reproduction_tier: ReproductionTier | Literal["reported_claim"]
     tolerance: float | None = Field(default=None, ge=0)
 
 

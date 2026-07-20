@@ -82,7 +82,12 @@ class ReproductionEngine:
         )
         claim = next((claim for claim in notebook.claims if claim.metric == metric), None)
         reported = (
-            MetricValue(value=claim.value, provenance=claim.source_ref)
+            MetricValue(
+                value=claim.value,
+                protocol_id="reported_claim_unverified",
+                reproduction_tier="reported_claim",
+                provenance=claim.source_ref,
+            )
             if claim is not None
             else None
         )
@@ -114,6 +119,7 @@ class ReproductionEngine:
                 value=reproduced,
                 tolerance=tolerance,
                 protocol_id="proto_original_v1",
+                reproduction_tier=ReproductionTier.EXACT_SUPPORTED,
                 provenance="compute:reproduction@1",
             ),
             corrected=None,
@@ -150,12 +156,14 @@ class ReproductionEngine:
             value=baseline,
             tolerance=comparison.reproduced.tolerance if comparison.reproduced else 0.005,
             protocol_id="proto_original_v1",
+            reproduction_tier=result.tier,
             provenance="compute:reproduction@1",
         )
         comparison.corrected = MetricValue(
             value=corrected,
             tolerance=0.005,
             protocol_id="proto_corrected_v1",
+            reproduction_tier=result.tier,
             provenance="compute:correction@1",
         )
         return comparison

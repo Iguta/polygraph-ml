@@ -50,6 +50,9 @@ async def test_fixture_benchmark_question_resume_verdict_and_report(
     assert audit["status"] == AuditStatus.WAITING_FOR_USER
     assert audit["reproduction_tier"] == "exact_supported"
     assert audit["metric_comparison"]["reproduction_status"] == "within_tolerance"
+    assert audit["metric_comparison"]["reported"]["protocol_id"] == "reported_claim_unverified"
+    assert audit["metric_comparison"]["reported"]["reproduction_tier"] == "reported_claim"
+    assert audit["metric_comparison"]["reproduced"]["reproduction_tier"] == "exact_supported"
     assert len(audit["open_questions"]) == 1
     question = audit["open_questions"][0]
     assert question["why_it_matters"]

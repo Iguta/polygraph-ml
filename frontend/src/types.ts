@@ -74,7 +74,8 @@ export interface Question {
 export interface MetricValue {
   value: number;
   provenance: string;
-  protocol_id: string | null;
+  protocol_id: string;
+  reproduction_tier: string;
   tolerance: number | null;
 }
 

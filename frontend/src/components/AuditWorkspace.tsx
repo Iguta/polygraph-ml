@@ -117,7 +117,11 @@ function Metric({
     <div className={clsx("metric-cell", accent && "accent")}>
       <span>{label}</span>
       <strong>{value ? value.value.toFixed(3) : "—"}</strong>
-      <small>{value?.protocol_id ?? "No protocol available"}</small>
+      <small>
+        {value
+          ? `${value.protocol_id} · ${value.reproduction_tier}`
+          : "No protocol available"}
+      </small>
       <code title={value?.provenance}>
         {value?.provenance ?? "not available"}
       </code>

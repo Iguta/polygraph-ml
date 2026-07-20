@@ -35,7 +35,7 @@ uv run pytest tests/test_benchmark_evaluation.py
 
 Fixture results must never be presented as a live GPT-5.6 evaluation. A separate sanitized live trace is still required before the live-agent DoD can be checked.
 
-The checked-in queue-timing artifact records four fixture cases, observed p95 `0.0755` seconds, a 60-second evidence-based minimum, and the configured 300-second visibility timeout with a 60-second heartbeat. It remains explicitly uncalibrated for production until at least 20 deployed live durations are captured.
+`benchmark-results/queue-timing.json` is fixture-only evidence: four cases, observed p95 `0.0755` seconds, and a 60-second minimum. It must not be used to size production queues. Production calibration is recorded separately in `benchmark-results/queue-timing-live.json`, based on 20 metadata-only deployed live durations: P95 `32.666` seconds, 161-second recommendation, and configured 300-second visibility / 60-second heartbeat. Recalibrate after materially larger workloads.
 
 ## Admission rules
 

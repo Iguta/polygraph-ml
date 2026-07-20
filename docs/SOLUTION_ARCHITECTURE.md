@@ -59,7 +59,7 @@
 | Artifact storage | Amazon S3 with presigned upload/download URLs | Large files bypass API containers; retention and encryption controls |
 | State/event store | Amazon DynamoDB | Durable audit state and ordered event replay without server affinity |
 | Compute | pandas, PyArrow, scikit-learn, skops; limited XGBoost/ONNX descriptors | Initial safe adapter and deterministic probe surface |
-| Secrets | AWS Secrets Manager + task IAM role | Server-side OpenAI key without source-control or browser exposure |
+| Secrets | AWS Secrets Manager + ECS execution role injection | Server-side OpenAI key without source-control or browser exposure |
 | Observability | CloudWatch plus sanitized OpenAI/Agents SDK traces | Operational debugging while controlling sensitive payload capture |
 | Edge protection | ALB TLS + AWS WAF per-IP API/session rate limits | Public demo abuse resistance before application session quotas |
 | Testing | pytest, contract tests, synthetic/public benchmarks, Playwright | Unit correctness, ground-truth evaluation, and demo-path confidence |
@@ -78,7 +78,7 @@ Validates metadata, issues scoped presigned URLs, persists project/audit state, 
 
 ### SQS
 
-The queue decouples user requests from audit duration. Messages contain only identifiers, artifact references, requested operation, and idempotency metadata. They never contain artifact bytes, raw API keys, or full prompts. Visibility timeout, heartbeat/extension, bounded retry count, and a DLQ are configured. The initial 300-second lease is conservative relative to the captured fixture duration and must be recalibrated after live production measurements.
+The queue decouples user requests from audit duration. Messages contain only identifiers, artifact references, requested operation, and idempotency metadata. They never contain artifact bytes, raw API keys, or full prompts. Visibility timeout, heartbeat/extension, bounded retry count, and a DLQ are configured. Twenty metadata-only deployed live durations produced a 32.666-second P95 and a 161-second recommendation; the configured 300-second lease and 60-second heartbeat cover that sample and must be recalibrated after materially larger workloads.
 
 ### Audit coordinator worker
 
@@ -129,7 +129,7 @@ The agent receives profiles, source excerpts, scenario facts, and deterministic 
 
 ## 8. Local development
 
-Docker Compose runs frontend, API, a local worker, and local service substitutes where practical. Fixture mode does not require an OpenAI key. Live mode reads `OPENAI_API_KEY` from an ignored `.env`; tests must never echo it. AWS production injects the secret only through the coordinator worker's ECS execution role.
+Docker Compose runs frontend, API, a local worker, and local service substitutes where practical. Fixture mode does not require an OpenAI key. Live mode reads `OPENAI_API_KEY` from an ignored `.env`; tests must never echo it. AWS production uses the coordinator worker's ECS execution role only to inject the secret into that worker container; runtime AWS API permissions remain on the separate task role.
 
 ## 9. Architecture evolution
 

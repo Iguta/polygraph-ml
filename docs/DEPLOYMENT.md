@@ -88,4 +88,4 @@ After at least 20 deployed live audits, export their per-audit durations in the 
 
 ## Retention and deletion
 
-User artifacts expire from S3 after `artifact_retention_days` (default seven); noncurrent versions and incomplete uploads expire sooner. Session records use DynamoDB TTL. `DELETE /api/v1/projects/{project_id}` synchronously removes the project's artifacts and durable project/audit/event records. Local and mocked-AWS deletion behavior is covered by tests; production deletion still requires a disposable-resource drill.
+User artifacts expire from S3 after `artifact_retention_days` (default seven); noncurrent versions and incomplete uploads expire sooner. Session records use DynamoDB TTL. `DELETE /api/v1/projects/{project_id}` synchronously removes the project's artifacts and durable project/audit/event records. Local and mocked-AWS deletion behavior is covered by tests, and the recorded public deployed-smoke drill verifies disposable project deletion through the production API.

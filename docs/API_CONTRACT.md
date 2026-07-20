@@ -387,18 +387,22 @@ Body: `{ "audience": "technical" | "executive", "format": "markdown" }`.
   "metric": "roc_auc",
   "reported": {
     "value": 1.0,
+    "protocol_id": "reported_claim_unverified",
+    "reproduction_tier": "reported_claim",
     "provenance": "training.ipynb#cell=2"
   },
   "reproduced": {
     "value": 1.0,
     "tolerance": 0.005,
     "protocol_id": "proto_original_v1",
+    "reproduction_tier": "exact_supported",
     "provenance": "result:reproduction.json"
   },
   "corrected": {
     "value": 0.8627956989247312,
     "tolerance": 0.005,
     "protocol_id": "proto_corrected_v1",
+    "reproduction_tier": "exact_supported",
     "provenance": "result:corrected.json"
   },
   "reproduction_status": "within_tolerance"
