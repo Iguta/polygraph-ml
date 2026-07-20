@@ -16,9 +16,14 @@ export POLYGRAPHML_DATABASE_PATH=.polygraphml-data/e2e.db
 export POLYGRAPHML_ARTIFACT_ROOT=.polygraphml-data/e2e-artifacts
 export POLYGRAPHML_WORKER_POLL_SECONDS=0.05
 
-uv run uvicorn polygraphml.api.main:app --host 127.0.0.1 --port 8000 &
-uv run python -m polygraphml.worker.main &
-uv run python - <<'PY'
+# Prepare the environment before starting background processes.  Concurrent
+# `uv run` calls can contend for the environment lock on a fresh CI runner.
+uv sync --all-groups --frozen
+runtime_python=".venv/bin/python"
+
+"${runtime_python}" -m uvicorn polygraphml.api.main:app --host 127.0.0.1 --port 8000 &
+"${runtime_python}" -m polygraphml.worker.main &
+"${runtime_python}" - <<'PY'
 import time
 import urllib.request
 
