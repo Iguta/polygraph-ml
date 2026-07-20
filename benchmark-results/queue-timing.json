@@ -1,0 +1,17 @@
+{
+  "case_count": 4,
+  "configured_covers_measurement": true,
+  "configured_heartbeat_seconds": 60.0,
+  "configured_visibility_seconds": 300,
+  "limitations": [
+    "Production calibration requires at least 20 deployed live audit durations."
+  ],
+  "measurement_mode": "fixture",
+  "observed_max_seconds": 0.0755,
+  "observed_p95_seconds": 0.0755,
+  "production_calibrated": false,
+  "recommended_visibility_seconds": 60,
+  "safety_multiplier": 4.0,
+  "schema_version": "1",
+  "startup_allowance_seconds": 30
+}

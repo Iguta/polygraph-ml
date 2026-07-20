@@ -1,0 +1,51 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      POLYGRAPHML_ENVIRONMENT: development
+      POLYGRAPHML_AGENT_MODE: fixture
+      POLYGRAPHML_DATABASE_PATH: /data/polygraphml.db
+      POLYGRAPHML_ARTIFACT_ROOT: /data/artifacts
+    ports:
+      - "8000:8000"
+    volumes:
+      - polygraphml-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      POLYGRAPHML_ENVIRONMENT: development
+      POLYGRAPHML_AGENT_MODE: fixture
+      POLYGRAPHML_DATABASE_PATH: /data/polygraphml.db
+      POLYGRAPHML_ARTIFACT_ROOT: /data/artifacts
+    volumes:
+      - polygraphml-data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+
+  frontend:
+    image: node:22.22.1-bookworm-slim
+    working_dir: /workspace/frontend
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - .:/workspace
+      - frontend-node-modules:/workspace/frontend/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  polygraphml-data:
+  frontend-node-modules:

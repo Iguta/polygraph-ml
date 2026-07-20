@@ -1,41 +1,93 @@
 # Business Requirements Document — PolygraphML
 
-**Version:** 1.0 · **Owner:** David · **Date:** July 18, 2026 · **Status:** Approved for build
+**Version:** 1.1 · **Owner:** David · **Date:** July 18, 2026 · **Status:** Approved foundation
 
 ## 1. Executive summary
 
-PolygraphML is an adversarial validation tool for machine learning models. It detects data leakage — the most common silent failure in applied ML — and, uniquely, proves each finding by retraining the model without the tainted signal and demonstrating the performance collapse. The immediate business objective is to win the Developer Tools track of OpenAI Build Week 2026 (submission due July 21, 2026, 5:00 PM PT). The longer-term objective is to establish "ML QA" as a product category, with leakage detection as the wedge.
+PolygraphML is an adversarial validation product for machine learning systems. It evaluates the trained model, dataset, and training/evaluation pipeline together, preferably from the original Jupyter notebook or GitHub repository. It reproduces the reported metric, investigates scenario-dependent leakage and evaluation defects, applies a defensible correction, and reports the measured impact with a replayable decision trace.
 
-## 2. Business context and opportunity
+The immediate objective is a polished, deployed OpenAI Build Week 2026 submission in the Developer Tools track. The longer-term objective is to establish **ML QA** as a product category, with evidence-backed leakage and evaluation auditing as the entry point.
 
-The market has commoditized model *building*. SageMaker Autopilot, DataRobot, H2O AutoML, and PyCaret let anyone train competitive models in minutes. No corresponding investment has been made in model *validation*: leakage is caught today by senior-reviewer intuition, if at all. This is a structural gap, not a feature gap — the same asymmetry that created the SDET role when software development tooling outpaced software testing two decades ago.
+## 2. Business problem
 
-The cost of the gap is documented. Kapoor & Narayanan (Princeton, *Patterns* 2023) surveyed 17 scientific fields and found leakage affecting 294+ published papers, with corrected results showing complex ML performing no better than logistic regression. Roberts et al. (*Nature Machine Intelligence* 2021) reviewed 300+ COVID-19 diagnostic ML models and found none clinically usable, with leakage-class dataset failures among the root causes. In industry, the same failure mode silently invalidates churn models (features populated after cancellation), predictive-maintenance models (failure-adjacent sensor readings bleeding into training windows), and credit models (post-outcome fields), with direct financial and safety consequences.
+Model-building tools optimize for training speed and headline metrics. Trust still depends on manual review of feature availability, split design, preprocessing, evaluation code, and deployment context. This creates predictable failures:
 
-## 3. Business objectives
+- post-outcome or future information is available during training but not at prediction time;
+- the same entity or near-duplicate rows appear across train and test;
+- preprocessing is fit before the split;
+- the reported metric cannot be reproduced from the submitted artifacts;
+- a statistically suspicious feature is accused without understanding the real decision scenario.
 
-The primary objective is a winning hackathon submission: a working, polished, end-to-end product that scores highly on all four official judging criteria (Technological Implementation, Design, Potential Impact, Quality of the Idea). Secondary objectives are a public repository credible enough to serve as a portfolio anchor for David's data science consultancy, and validation of the "ML QA" positioning for potential post-hackathon development.
+Auditing only a dataset is insufficient. Leakage is a property of the relationship among data, code, model, evaluation protocol, and intended use. A feature can be legitimate in one scenario and leakage in another.
 
-## 4. Target market and users
+## 3. Value proposition
 
-The primary user is the practicing data scientist or ML engineer who trains tabular models (churn, risk, maintenance, credit) and lacks tooling to verify them before deployment. Secondary users are team leads and reviewers who must sign off on model quality, and — via the stakeholder report — the non-technical decision-makers who consume model predictions. The hackathon judging panel (senior OpenAI staff, developer-heavy) is a deliberate proxy audience: they have all seen or shipped a leaked model.
+For data scientists and ML reviewers, PolygraphML turns a slow, intuition-heavy review into an inspectable experiment. It does not stop at “this column looks suspicious.” It shows:
 
-## 5. Value proposition
+- what the submitted system claims;
+- whether that claim can be reproduced;
+- which assumption or mechanism is under test;
+- what deterministic probe was run;
+- what evidence confirms, clears, or leaves the issue inconclusive;
+- how performance changes under a corrected evaluation.
 
-For model builders, PolygraphML converts an invisible, reputation-destroying failure mode into a five-minute pre-deployment check with demonstrated (not asserted) findings. Against data-validation tools (Deepchecks, Great Expectations), the differentiation is semantic reasoning about feature meaning and temporal plausibility; against AutoML, it is the missing counterpart — AutoML gives you a model, PolygraphML tells you whether to trust it. The proof-by-ablation loop is the moat: no existing tool demonstrates its findings experimentally.
+The differentiator is not generic data profiling. It is **scenario-aware investigation plus reproducible proof**.
+
+## 4. Target users
+
+**Primary:** practicing data scientists and ML engineers auditing tabular classification systems before deployment.
+
+**Secondary:** technical reviewers, consultants, model-risk teams, and engineering leads who need review evidence they can challenge and share.
+
+**Hackathon audience:** technically sophisticated judges who should understand the problem and witness the full evidence loop in under three minutes.
+
+## 5. Business objectives
+
+1. Deliver a reliable, beautiful, end-to-end hackathon product deployed on Vercel and AWS.
+2. Make GPT-5.6 central to semantic reasoning and investigation planning, while keeping numerical claims deterministic.
+3. Demonstrate a public, reproducible validation case in addition to synthetic planted-leak tests.
+4. Produce a repository and architecture credible as the foundation of a post-hackathon ML QA product.
+5. Preserve an extensible adapter and benchmark model so initial formats and domains do not become permanent limits.
 
 ## 6. Success criteria
 
-The submission is successful if it: runs end-to-end live (upload → interrogation → probes → proof → report) with no manual intervention; catches all planted leaks in the synthetic evaluation suite while clearing clean features (zero false accusations in the demo path); completes a full audit on the demo dataset in under 90 seconds; and is submitted on time with the required Codex Session ID, README documentation, and a sub-3-minute demo video. Winning first or second in Developer Tools is the outcome target; a top-quality submission meeting the criteria above is the controllable target.
+The hackathon release succeeds when:
 
-## 7. Constraints and assumptions
+- a user can submit either a public GitHub repository or an artifact bundle containing the model, dataset, and optional notebook;
+- the system captures the prediction scenario and asks a follow-up question when a material assumption is missing;
+- an audit survives browser refresh because it is queued through SQS and persisted server-side;
+- the system displays reported, reproduced, and corrected metrics without allowing the LLM to invent any number;
+- every confirmed finding links to deterministic evidence and a rerunnable correction;
+- a clean-control benchmark produces zero false confirmed findings;
+- at least one planted-leak benchmark and one curated public benchmark complete end to end;
+- the React experience is polished, intuitive, responsive, and demo-ready;
+- the deployed demo path completes within the agreed performance budget and has a deterministic recorded fallback;
+- the repository includes required Codex usage documentation and an honest implementation log.
 
-The build window is approximately three days with a single builder. The project must use GPT-5.6 centrally and Codex visibly (hackathon rules). Scope is constrained to tabular datasets and scikit-learn/XGBoost-compatible models; no enterprise integrations, no accounts, no cloud training (SageMaker is roadmap only — local training keeps the demo fast and self-contained). Demo data is synthetic with planted, known leaks, avoiding any privacy or licensing exposure.
+## 7. Product and technical constraints
 
-## 8. Risks to the business objective
+- OpenAI is the initial model provider; `gpt-5.6-sol` is the primary audit model through the Responses API and OpenAI Agents SDK.
+- One audit agent with typed tools is the default. Multi-agent complexity requires evaluation evidence before adoption.
+- The OpenAI API key is server-side only and stored in AWS Secrets Manager; it must never enter browser code, SQS messages, logs, or source control.
+- The hackathon release statically inspects repositories and notebooks and never executes arbitrary submitted source. Any future execution requires a separate disposable, no-secret, resource-limited task.
+- Remote pickle, joblib, and cloudpickle artifacts are rejected. Safe adapters are introduced incrementally.
+- Initial deep support is tabular classification with scikit-learn/skops. XGBoost and ONNX are recognized as limited adapter paths without narrowing the eventual product boundary.
+- Public benchmark use requires verified provenance, license, expected finding, and reproducible setup.
 
-The material risks are demo failure (mitigated by fast local retraining on small data and a rehearsed, recorded fallback), false accusations undermining credibility (mitigated by the synthetic ground-truth test suite and by showing the tool clearing clean features), and scope creep beyond the leakage wedge (mitigated by the explicit cut lines in the Build Plan). Competitive risk is low in-category: adjacent tools validate data, not models, and none proves findings by ablation.
+## 8. Material risks and mitigations
 
-## 9. Out of scope for this phase
+| Risk | Business impact | Mitigation |
+|---|---|---|
+| False accusation | Destroys trust in the product | Scenario questions, confirmation criteria, clean controls, and an `inconclusive` state |
+| Ablation mistaken for proof | Overstates what the evidence supports | Require mechanism evidence plus measured inflation; describe ablation as impact evidence |
+| Untrusted code execution | Security compromise | Do not execute submitted source in P0; require a separate no-secret sandbox before enabling it |
+| API key or cost exposure | Financial/security loss | Secrets Manager, backend-only calls, rate limits, quotas, redacted logs |
+| Demo waits or fails | Weak judging experience | SQS durability, saved demo fixture, polling fallback, rehearsed recorded run |
+| Public case is irreproducible or improperly licensed | Credibility/legal risk | Benchmark admission checklist and synthetic fallback |
+| Scope expansion | Core loop remains incomplete | Phased DoD and explicit hackathon cut lines |
 
-Deep learning models, computer-vision and NLP datasets, CI/CD integration, multi-user collaboration, billing, SageMaker execution, and fairness or drift auditing are explicitly out of scope for the hackathon build. They appear in the roadmap section of the PRD as the broader "ML QA" vision.
+## 9. Scope boundaries
+
+The hackathon release is not a universal validator for every ML framework. It prioritizes one excellent vertical slice: a tabular model plus its dataset and notebook/repository, audited end to end. Dataset-only preflight may exist as a secondary mode, but it is not the product claim.
+
+Deep learning, computer vision, NLP, private GitHub authentication, arbitrary dependency execution, continuous monitoring, fairness, drift, and enterprise governance belong to the roadmap. The roadmap is open-ended; the initial adapter list is a starting point, not the definition of PolygraphML.

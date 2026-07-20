@@ -1,0 +1,11 @@
+environment    = "hackathon"
+aws_region     = "us-east-1"
+cors_origins   = "https://polygraphml.example.vercel.app"
+certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/replace-me"
+api_hostname    = "api.polygraphml.example.com"
+hosted_zone_id  = "Z00000000000000000000"
+queue_visibility_seconds = 300
+session_rate_limit_per_five_minutes = 100
+api_rate_limit_per_five_minutes     = 2000
+api_image      = "123456789012.dkr.ecr.us-east-1.amazonaws.com/polygraphml-api@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+worker_image   = "123456789012.dkr.ecr.us-east-1.amazonaws.com/polygraphml-worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"

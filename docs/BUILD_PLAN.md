@@ -1,23 +1,75 @@
-# Build Plan — PolygraphML (3 days)
+# Hackathon Build Plan — PolygraphML
 
-**Submission deadline:** July 21, 2026, 5:00 PM PT. Everything below serves one goal: the demo path runs flawlessly, twice, on camera.
+**Submission target:** OpenAI Build Week 2026 · **Detailed DoD:** [IMPLEMENTATION_PHASES.md](IMPLEMENTATION_PHASES.md)
 
-## Day 1 — Engine end-to-end (ugly is fine)
+This is the deadline-oriented critical path. It does not replace the phase gates. The demo path must be real, reproducible, and polished before secondary adapters or audit families are added.
 
-The day ends with a curl-driven audit completing on the synthetic churn dataset. In order: scaffold the repo with Codex (FastAPI app, React shell, Makefile, uv/npm wiring) and **capture the Codex Session ID immediately via `/feedback`**; write the synthetic dataset generator with all five planted leak types plus the clean control — ground truth exists before the engine does; implement intake + profiling; implement the semantic auditor call with the Finding schema and validation; implement two probes (single-feature power, proxy correlation); implement the ablation prover with logistic regression + XGBoost baselines. Definition of done: `POST /datasets` → `POST /audits` → `GET /audits/{id}` returns proven findings on the planted proxy leak, all from the terminal.
+## Day 1 — One trustworthy vertical slice
 
-## Day 2 — The product
+Build the smallest complete evidence bundle first: one CSV/Parquet dataset, one safe model artifact, one notebook, and one declared scenario. Use a curated benchmark repository so input, expected issue, and corrected result are pinned before implementation.
 
-Morning: remaining probes (contamination, temporal), the SSE event stream, and the verdict composer with templated metrics. Afternoon: the dashboard — intake state, live interrogation view with feature chips and streaming narration, the proof card with the metric-collapse animation, verdict panel, report view. Codex writes the pytest suite against the synthetic datasets (every planted leak caught, clean dataset produces zero Proven findings) and the Playwright smoke test of the demo path. Definition of done: a stranger can run `make dev`, click through upload → interrogate → proof → report on the sample dataset, and the full test suite is green.
+Order of work:
 
-## Day 3 — Polish, proof, submission
+1. Scaffold React/TypeScript, FastAPI, shared contracts, tests, and fixture mode.
+2. Implement artifact inventory and the primary safe adapter path (`.skops` + tabular data + `.ipynb`).
+3. Parse the notebook sufficiently to locate target, split, metric, claimed score, and relevant source cells.
+4. Implement reported/reproduced/corrected metric objects and one corrected evaluation.
+5. Add synthetic ground-truth fixtures before broadening the engine.
+6. Capture the active Codex session identifier and record only work that actually exists.
 
-Morning: visual polish on the five states (this is a judged Design criterion — spacing, typography, the collapse animation timing), latency tuning to keep the audit under 90 seconds, and the stakeholder report quality pass. Midday: record the demo video per [DEMO_SCRIPT.md](DEMO_SCRIPT.md) — multiple takes, pick one, upload to YouTube. Afternoon: README final pass, [CODEX_USAGE.md](CODEX_USAGE.md) with session narrative and ID, Dockerfile verification (`docker compose up` cold-start test), repo hygiene (squash WIP commits on `dev`, merge to `main`), Devpost submission with hours to spare. **Submit by 2:00 PM PT — never race the deadline.**
+**Day-1 exit:** a backend test or CLI fixture returns all three metric states for the pinned benchmark with provenance and no LLM-generated numbers.
 
-## Cut lines (execute in this order if behind)
+## Day 2 — Agent, durable execution, and product experience
 
-First cut: email delivery (FR-8) — the report on screen carries the demo. Second: pickled-model intake (FR-9) — built-in baselines suffice. Third: temporal probe — three probe types still demonstrate the category; keep the planted temporal leak out of the demo dataset if its probe is cut. Fourth: report audience toggle — ship executive-voice only. **Never cut:** the semantic audit, the ablation proof loop, the clean-feature clearance, the synthetic test suite, or the live narration — these are, respectively, the GPT-5.6 story, the wow moment, the credibility, the technical-effort evidence, and the design signature.
+1. Integrate `gpt-5.6-sol` using the OpenAI Agents SDK and typed tools.
+2. Implement structured hypotheses, falsification conditions, one material follow-up question, and answer/resume.
+3. Implement the initial high-value probes: availability/post-outcome, split/group contamination, preprocessing order, and ablation/corrected evaluation.
+4. Persist sanitized `AuditEvent` records and stream the Decision Trace.
+5. Add S3/DynamoDB/SQS integration with idempotency, retry, and a DLQ; retain fixture substitutes for local tests.
+6. Build the complete React flow: source, mapping, scenario, queue, trace, correction comparison, verdict, and report.
 
-## Standing rules
+**Day-2 exit:** the browser completes the benchmark audit, survives refresh, pauses for a question, resumes, and lands on a traceable verdict.
 
-Commit to `dev` continuously; `main` receives only working states. Any bug on the demo path outranks any feature anywhere. Every Codex session that touches core functionality gets its session noted in CODEX_USAGE.md the same hour. If a live component becomes flaky within six hours of recording, freeze its inputs and demo the frozen path — determinism beats ambition on camera.
+## Day 3 — Cloud deployment, evaluation, polish, and submission
+
+1. Deploy the backend to AWS and the frontend to Vercel; configure CORS, Secrets Manager, quotas, and retention.
+2. Run the synthetic leak suite, clean control, and curated public benchmark from pinned artifacts.
+3. Fix every false confirmed finding and every demo-path reliability issue before adding features.
+4. Complete visual polish, accessibility, loading/error states, and 1080p recording checks.
+5. Run cold-start, refresh/replay, duplicate-message, missing-key, and partial-failure drills.
+6. Record the demo, update the README and Codex log truthfully, and submit with time reserved for upload failures.
+
+**Day-3 exit:** deployed URL, green critical tests, saved benchmark results, final video, complete submission metadata, and no secrets in Git history.
+
+## Non-negotiable demo scope
+
+- model + dataset + notebook/repository evidence;
+- scenario-aware follow-up question;
+- GPT-5.6 Sol as the central semantic investigator;
+- deterministic reported/reproduced/corrected metrics;
+- at least one confirmed issue and one cleared check;
+- replayable Decision Trace;
+- SQS-backed durable job;
+- polished React/Vercel experience and AWS backend;
+- synthetic clean control plus one public benchmark.
+
+## Cut lines, in order
+
+1. PDF and email export.
+2. ONNX support.
+3. Additional model adapters beyond the primary `.skops` path.
+4. Private GitHub access.
+5. Arbitrary notebook execution and dependency installation.
+6. Multiple public benchmark cases beyond the one pinned demo case.
+7. Non-binary-classification tasks.
+
+Do not cut the Decision Trace, scenario question, corrected metric, clean control, safe artifact policy, or deployed end-to-end path. If GitHub import threatens the core path, keep a working upload/benchmark path and show repository import as clearly labeled partial functionality rather than faking it.
+
+## Standing engineering rules
+
+- Any demo-path defect outranks a new feature.
+- No implementation claim enters README or CODEX_USAGE without a corresponding file/test/commit.
+- No raw API key, presigned URL, dataset row, or sensitive prompt content enters logs or screenshots.
+- Expected benchmark findings are declared before the system runs.
+- Freeze benchmark versions and demo data once the critical flow is green.
+- Maintain a deterministic fixture-event run for frontend development and recording contingency; never present it as a live audit.
