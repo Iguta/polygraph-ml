@@ -292,6 +292,7 @@ Answers the current material question and enqueues a resume operation.
 ```
 
 **202** returns `status: queued`. Repeating the same idempotent answer must not duplicate the resume job.
+`Idempotency-Key` is required on this mutation; repeating the same key returns the existing queued audit and re-attempts the durable enqueue without changing the answer.
 
 ### `POST /audits/{audit_id}/report`
 

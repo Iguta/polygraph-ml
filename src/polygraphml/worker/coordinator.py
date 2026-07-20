@@ -30,6 +30,7 @@ from polygraphml.domain.models import (
     FindingMechanism,
     FindingStatus,
     Hypothesis,
+    JobMessage,
     Project,
     Question,
     Severity,
@@ -129,6 +130,40 @@ class AuditCoordinator:
             with suppress(asyncio.CancelledError):
                 await heartbeat
             self.repository.release_audit_lease(audit.audit_id, self.worker_id)
+
+    def reconcile_queued_audits(self) -> int:
+        """Re-enqueue stale persisted audits after an API/SQS interleaving failure."""
+        recovered = 0
+        now = utc_now()
+        for audit in self.repository.list(Audit):
+            age = (now - audit.updated_at).total_seconds()
+            if (
+                audit.status != AuditStatus.QUEUED
+                or audit.lease_owner is not None
+                or age < self.settings.enqueue_recovery_seconds
+            ):
+                continue
+            operation = (
+                "resume"
+                if audit.question_ids and audit.checkpoint == "enqueue_pending"
+                else "start"
+            )
+            key = (
+                f"resume:{audit.question_ids[-1]}"
+                if operation == "resume"
+                else f"start:{audit.audit_id}"
+            )
+            try:
+                self.queue.send(
+                    JobMessage(audit_id=audit.audit_id, operation=operation, idempotency_key=key)
+                )
+            except Exception:
+                continue
+            audit.checkpoint = "enqueued"
+            audit.updated_at = now
+            self.repository.put(audit)
+            recovered += 1
+        return recovered
 
     async def _heartbeat(self, job: ClaimedJob) -> None:
         interval = max(1.0, min(60.0, self.settings.worker_lease_seconds / 3))
@@ -743,6 +778,7 @@ async def run_polling_worker(
 ) -> None:
     stop = should_stop or (lambda: False)
     while not stop():
+        coordinator.reconcile_queued_audits()
         job = queue.receive()
         if job is None:
             await asyncio.sleep(poll_seconds)

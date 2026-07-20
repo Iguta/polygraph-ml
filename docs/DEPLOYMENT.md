@@ -1,6 +1,6 @@
 # Deployment Runbook
 
-The production topology is React on Vercel and FastAPI plus one audit coordinator worker on AWS ECS Fargate. S3 stores artifacts, DynamoDB stores durable state and ordered events, and SQS/DLQ carries identifier-only jobs. Terraform defines the AWS resources. The current hackathon deployment is verified through public API/frontend health checks and a metadata-only public-path smoke audit; the remaining resilience-drill matrix is tracked in `docs/IMPLEMENTATION_PHASES.md`.
+The production topology is React on Vercel and FastAPI plus one audit coordinator worker on AWS ECS Fargate. S3 stores artifacts, DynamoDB stores durable state and ordered events, and SQS/DLQ carries identifier-only jobs. Terraform defines the AWS resources. The current hackathon deployment is verified through public API/frontend health checks, a metadata-only public-path smoke audit, cold-start, refresh/replay, question/resume, controlled partial-failure/DLQ, and disposable deletion drills recorded in `docs/IMPLEMENTATION_PHASES.md`.
 
 ## Prerequisites
 
@@ -64,9 +64,9 @@ Do not mark deployment complete until all of these are recorded against the publ
 
 `.github/workflows/ai-pr-review.yml` runs only for non-draft pull requests targeting `dev`. It uses `gpt-5.6-terra` through the Responses API and fails closed on high/critical findings, model/API errors, oversized diffs, or potential credential material. The workflow uses `pull_request_target`, checks out only the trusted base SHA, and fetches PR patches from GitHub's API; it never executes PR code while the OpenAI secret is available.
 
-Before enabling merges, add the repository Actions secret `OPENAI_API_KEY` and configure `gpt-5.6-terra` as a required status check in the `dev` branch protection rule. The model receives at most 80 textual files / 80,000 patch characters, and reviews are posted as one updatable PR comment. It is a merge gate, not a substitute for human review.
+Before enabling merges, add the repository Actions secret `OPENAI_API_KEY` and configure `gpt-5.6-terra` as a required status check in the `dev` branch protection rule. The reviewer covers up to four bounded textual chunks (40 files / 60,000 patch characters each), refuses approval if GitHub omits a patch, and posts one updatable PR comment. It is a merge gate, not a substitute for human review.
 
-For the current private repository, GitHub returned `403` when branch protection was configured: the account must upgrade to GitHub Pro (or make the repository public) before required checks can mechanically prevent a merge. Until then, the workflow reports its result but cannot enforce the policy by itself.
+The repository is public, so GitHub branch protection can require the `gpt-5.6-terra` status check before merging to `dev`.
 
 Run the live smoke recorder only after configuring the ignored local key:
 

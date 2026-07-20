@@ -41,6 +41,7 @@ class AuditService:
         if existing_id:
             existing = self.repository.get(Audit, existing_id)
             if existing is not None:
+                self._enqueue_if_queued(existing)
                 return existing
         if self.repository.count_active_audits(session.session_id) >= session.max_live_audits:
             raise PolygraphError(
@@ -60,6 +61,7 @@ class AuditService:
             scenario_revision=scenario_revision,
             mode=mode,
             status=AuditStatus.QUEUED,
+            checkpoint="enqueue_pending",
         )
         self.repository.put(audit)
         self.repository.record_idempotent_result(scope, idempotency_key, audit.audit_id)
@@ -71,16 +73,10 @@ class AuditService:
                 sequence=1,
                 type=EventType.AUDIT_STATE,
                 actor=Actor.SYSTEM,
-                payload={"status": AuditStatus.QUEUED.value, "checkpoint": "enqueued"},
+                payload={"status": AuditStatus.QUEUED.value, "checkpoint": "enqueue_pending"},
             ),
         )
-        self.queue.send(
-            JobMessage(
-                audit_id=audit.audit_id,
-                operation="start",
-                idempotency_key=f"start:{audit.audit_id}",
-            )
-        )
+        self._enqueue_if_queued(audit)
         return self.repository.get(Audit, audit.audit_id) or audit
 
     def answer(
@@ -94,6 +90,7 @@ class AuditService:
         scope = f"audit:answer:{audit.audit_id}"
         existing = self.repository.get_idempotent_result(scope, idempotency_key)
         if existing:
+            self._enqueue_if_queued(audit)
             return self.repository.get(Audit, audit.audit_id) or audit
         if audit.session_id != session.session_id or question.audit_id != audit.audit_id:
             raise PolygraphError("AUDIT_NOT_FOUND", "Audit was not found.", status_code=404)
@@ -122,18 +119,34 @@ class AuditService:
             ),
         )
         audit.status = AuditStatus.QUEUED
-        audit.checkpoint = "answer_received"
+        audit.checkpoint = "enqueue_pending"
         audit.updated_at = utc_now()
         self.repository.put(audit)
         self.repository.record_idempotent_result(scope, idempotency_key, question.question_id)
-        self.queue.send(
-            JobMessage(
-                audit_id=audit.audit_id,
-                operation="resume",
-                idempotency_key=f"resume:{question.question_id}",
-            )
-        )
+        self._enqueue_if_queued(audit)
         return self.repository.get(Audit, audit.audit_id) or audit
+
+    def _enqueue_if_queued(self, audit: Audit) -> bool:
+        if audit.status != AuditStatus.QUEUED:
+            return False
+        operation = (
+            "resume" if audit.question_ids and audit.checkpoint == "enqueue_pending" else "start"
+        )
+        key = (
+            f"resume:{audit.question_ids[-1]}"
+            if operation == "resume"
+            else f"start:{audit.audit_id}"
+        )
+        try:
+            self.queue.send(
+                JobMessage(audit_id=audit.audit_id, operation=operation, idempotency_key=key)
+            )
+        except Exception:
+            return False
+        audit.checkpoint = "enqueued"
+        audit.updated_at = utc_now()
+        self.repository.put(audit)
+        return True
 
     def create_report(self, audit: Audit, project: Project, audience: str) -> AuditReport:
         existing = next(

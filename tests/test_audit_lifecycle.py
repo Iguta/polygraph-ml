@@ -1,12 +1,50 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 
 from polygraphml.api.container import AppContainer
 from polygraphml.config import Settings
-from polygraphml.domain.models import AuditStatus, EventType, Finding
+from polygraphml.domain.models import Audit, AuditStatus, EventType, Finding, utc_now
 from polygraphml.worker.coordinator import AuditCoordinator
+
+
+async def test_worker_recovers_a_queued_audit_after_enqueue_failure(
+    authorized_client: tuple[TestClient, AppContainer, Settings, dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, container, settings, headers = authorized_client
+    project = client.post(
+        "/api/v1/projects/from-benchmark",
+        headers=headers,
+        json={"benchmark_id": "synthetic_campaign_leak_v1"},
+    ).json()["data"]
+    original_send = container.queue.send
+    monkeypatch.setattr(
+        container.queue, "send", lambda message: (_ for _ in ()).throw(RuntimeError())
+    )
+    response = client.post(
+        "/api/v1/audits",
+        headers={**headers, "Idempotency-Key": "audit-enqueue-recovery"},
+        json={
+            "project_id": project["project_id"],
+            "scenario_revision": 1,
+            "mode": "complete_audit",
+        },
+    )
+    assert response.status_code == 202
+    audit = container.repository.get(Audit, response.json()["data"]["audit_id"])
+    assert audit and audit.checkpoint == "enqueue_pending"
+    audit.updated_at = utc_now() - timedelta(seconds=settings.enqueue_recovery_seconds + 1)
+    container.repository.put(audit)
+    monkeypatch.setattr(container.queue, "send", original_send)
+    coordinator = AuditCoordinator(
+        settings, container.repository, container.artifacts, container.queue
+    )
+    assert coordinator.reconcile_queued_audits() == 1
+    assert container.queue.receive() is not None
 
 
 async def test_fixture_benchmark_question_resume_verdict_and_report(

@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     cors_origins: tuple[str, ...] = ("http://localhost:5173",)
     worker_poll_seconds: float = 0.25
     worker_lease_seconds: int = 300
+    enqueue_recovery_seconds: int = 30
     aws_region: str = "us-east-1"
     s3_bucket: str | None = None
     dynamodb_table: str | None = None
