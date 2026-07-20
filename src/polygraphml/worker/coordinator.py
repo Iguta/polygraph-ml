@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
@@ -50,6 +51,8 @@ from polygraphml.errors import PolygraphError
 from polygraphml.queueing import AuditQueue, ClaimedJob
 from polygraphml.storage.artifacts import ArtifactStore
 from polygraphml.storage.base import DomainRepository
+
+LOGGER = logging.getLogger(__name__)
 
 
 class AuditCoordinator:
@@ -158,6 +161,7 @@ class AuditCoordinator:
                     JobMessage(audit_id=audit.audit_id, operation=operation, idempotency_key=key)
                 )
             except Exception:
+                LOGGER.warning("Queued audit recovery enqueue failed for %s", audit.audit_id)
                 continue
             audit.checkpoint = "enqueued"
             audit.updated_at = now
