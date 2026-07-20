@@ -55,3 +55,46 @@ def test_comment_is_markered_and_avoids_blocking_for_low_advice() -> None:
     comment = reviewer.render_comment(review, truncated=False)
     assert reviewer.MARKER in comment
     assert "advisory" in comment
+
+
+def test_collect_diff_splits_a_complete_large_pr_into_safe_chunks(monkeypatch) -> None:
+    files = [
+        {"filename": f"src/file_{index}.py", "patch": "+" + "x" * 40}
+        for index in range(reviewer.MAX_FILES_PER_CHUNK + 1)
+    ]
+
+    def fake_github_api(path: str, *, token: str, method: str = "GET", body=None):
+        assert "/pulls/1/files?" in path
+        return files
+
+    monkeypatch.setattr(reviewer, "github_api", fake_github_api)
+
+    chunks, truncated = reviewer.collect_diff("owner/repo", 1, "token")
+
+    assert truncated is False
+    assert len(chunks) == 2
+    assert "src/file_0.py" in chunks[0]
+    assert f"src/file_{reviewer.MAX_FILES_PER_CHUNK}.py" in chunks[1]
+
+
+def test_combine_reviews_preserves_a_block_from_any_chunk() -> None:
+    approval = {"verdict": "approve", "summary": "Chunk one is clear.", "findings": []}
+    block = {
+        "verdict": "changes_requested",
+        "summary": "Chunk two has a defect.",
+        "findings": [
+            {
+                "path": "src/worker.py",
+                "line": 4,
+                "severity": "high",
+                "title": "Unsafe retry",
+                "body": "This can duplicate a terminal transition.",
+                "blocking": True,
+            }
+        ],
+    }
+
+    combined = reviewer.combine_reviews([approval, block])
+
+    assert combined["verdict"] == "changes_requested"
+    assert combined["findings"] == block["findings"]
