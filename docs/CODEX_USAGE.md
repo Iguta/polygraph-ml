@@ -9,11 +9,13 @@ This is an evidence log for the OpenAI Build Week submission. It must describe c
 ## Git references
 
 - Starting documentation commit: `a4291caadc53fe27c7fefbda501f29076d52b227` (`docs: PolygraphML starter documentation suite`).
-- Implementation commit: pending David's review; the current implementation remains an intentionally uncommitted working tree.
+- Implementation commit: `0d8f00caefb6150ff3d86d30396c478a030612d9` (`feat: ship PolygraphML audit platform`).
+- Release-branch CI hardening: `2e3ee05`, `fa11d28`, `f738301`, and `e924c84`.
+- Review PR: [#1 — `agent/polygraphml-release` into `dev`](https://github.com/Iguta/polygraph-ml/pull/1) (draft while deterministic CI is complete).
 
 ## Current repository state
 
-As of July 20, 2026, the repository contains a functional local fixture-mode vertical slice, deterministic audit engine, polished React workflow, AWS infrastructure definitions, container images, and benchmark release gate. AWS and Vercel authentication pass. The delegated `polygraphml.davidiguta.com` zone resolves, the ACM certificate is issued, the pinned AWS stack is applied, and the API/worker services are healthy on ECS Fargate. The React production site responds at `https://polygraphml.davidiguta.com`. A sanitized live GPT-5.6 trace has now been captured; resilience drills and final Git review remain. The implementation remains an uncommitted working-tree change until David reviews and commits it.
+As of July 20, 2026, the repository contains a functional local fixture-mode vertical slice, deterministic audit engine, polished React workflow, AWS infrastructure definitions, container images, and benchmark release gate. AWS and Vercel authentication pass. The delegated `polygraphml.davidiguta.com` zone resolves, the ACM certificate is issued, the pinned AWS stack is applied, and the API/worker services are healthy on ECS Fargate. The React production site responds at `https://polygraphml.davidiguta.com`. A sanitized live GPT-5.6 trace was rerun after the committed benchmark expectations. The implementation is committed and under review in PR #1; demo-video and submission-metadata work remain David-owned.
 
 ## Completed Codex work
 
@@ -54,7 +56,7 @@ Codex pinned the OpenAI and Agents SDKs, configured explicit `gpt-5.6-sol` Respo
 
 ### AWS and Vercel definitions — July 18, 2026
 
-Codex added Docker images and Terraform for S3, DynamoDB, SQS/DLQ, Secrets Manager, ECR, ECS Fargate, IAM, CloudWatch, ALB TLS, and Route 53. Terraform validation and both local container builds pass. The browser's presigned-upload regression test proves that the session bearer token is not sent to S3. External deployment remains pending account/domain configuration.
+Codex added Docker images and Terraform for S3, DynamoDB, SQS/DLQ, Secrets Manager, ECR, ECS Fargate, IAM, CloudWatch, ALB TLS, and Route 53. Terraform validation and both local container builds pass. The browser's presigned-upload regression test proves that the session bearer token is not sent to S3. The stack is deployed and its public health surfaces are verified.
 
 **Evidence:** `infra/terraform/`, `Dockerfile.api`, `Dockerfile.worker`, `docs/DEPLOYMENT.md`, `tests/test_aws_adapters.py`, and `frontend/src/api.test.ts`.
 
@@ -81,7 +83,7 @@ Codex added a measured queue-timing calibrator, a fail-closed local live-smoke r
 | Gate | Result |
 |---|---|
 | Ruff format/lint and mypy | Passed |
-| Backend tests with coverage | 43 passed; 81.04% total coverage |
+| Backend tests with coverage | 48 passed; 81.27% total coverage |
 | Frontend lint/type/unit/build | Passed; 5 unit/component tests |
 | Playwright fixture workflow | Passed with refresh, resume, report, axe checks, and three responsive sizes |
 | Terraform 1.14.3 init/validate | Passed with AWS provider 6.55.0 |
@@ -91,12 +93,13 @@ Codex added a measured queue-timing calibrator, a fail-closed local live-smoke r
 | AWS API health and ALB target | Passed; `https://api.polygraphml.davidiguta.com/healthz` returned HTTP 200 |
 | Vercel custom domain | Passed; `https://polygraphml.davidiguta.com` returned HTTP 200 |
 | Live OpenAI smoke | Passed; sanitized trace recorded with 23 events and model `gpt-5.6-sol` |
+| GitHub Actions PR CI | Passed in run `29714407361`: backend, frontend including Playwright E2E, Terraform validation, and history secret scanning |
 
 ## Remaining submission work
 
-- Add the reviewed implementation commit hash after David approves the working tree.
+- Mark PR #1 ready for review to run the configured GPT-5.6 Terra reviewer, then merge after acceptance.
 - Retain the completed cold-start, refresh/replay, partial-failure, deletion, and DLQ metadata-only evidence for final review.
-- Record and verify the final demo video, public URL, repository, and submission metadata.
+- Record and verify the final demo video, fallback recording, and submission metadata.
 
 ## Debugging log
 
@@ -117,6 +120,7 @@ Add short, specific entries as real issues occur:
 | 2026-07-20 | Production cold start had not been demonstrated against the worker-only live secret boundary | Earlier smoke runs used an already-running worker | Scaled the worker to zero, waited for zero running tasks, started a fresh worker, and ran the public live smoke | The cold-start smoke completed with replay, question/resume, and disposable-project deletion evidence |
 | 2026-07-20 | PRs could reach `dev` with only deterministic CI checks | No semantic review gate existed for changes that passed lint and tests | Added a bounded, fail-closed `gpt-5.6-terra` review workflow that reads patches but never executes PR code with the OpenAI secret | Unit tests cover review policy and comment rendering; GitHub branch protection activation remains a repository setting |
 | 2026-07-20 | Required PR status checks could not be enabled on `dev` | GitHub rejected branch protection for the current private repository plan | Configured the repository Actions secret and documented the workflow/plan limitation without weakening workflow security | GitHub API returned HTTP 403; upgrade to Pro or make the repository public before enforcing the status check |
+| 2026-07-20 | Frontend CI could not launch its local API stack | The frontend job had no Python environment, then cold GitHub runners exceeded the original ten-second API readiness window | Installed the pinned backend environment in the frontend job, serialized E2E environment setup, captured service logs on failure, and allowed a bounded 30-second cold start | GitHub Actions run `29714407361` passed all four CI jobs, including Playwright E2E |
 
 ## Division of labor
 

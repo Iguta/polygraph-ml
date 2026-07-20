@@ -145,7 +145,7 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] At least one multi-mechanism synthetic case passes.
 - [x] At least one fully clean control has zero confirmed findings.
 - [x] One public model + dataset + notebook/repository benchmark completes end to end.
-- [ ] Expected findings are committed before live benchmark execution.
+- [x] Expected findings are committed before live benchmark execution (`0d8f00c` contains the benchmark registry; the bounded live audit was rerun on July 20 after that commit).
 - [x] Precision/recall, false confirmations, reproduction error, corrected-metric error, latency, token usage, and estimated cost are reported.
 - [x] Public benchmark license and provenance are reviewable from the UI or repository.
 - [x] COVID-19 case is included only if reproducibility and licensing gates pass; otherwise it remains explicitly roadmap.
@@ -163,9 +163,9 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] OpenAI key is stored in Secrets Manager and removed from any ad hoc deployment configuration.
 - [x] Repository and Git history pass secret scanning.
 - [x] Cold start, live audit, refresh/replay, question/resume, partial failure, and DLQ drills are recorded (`benchmark-results/cold-start-smoke.json` and `benchmark-results/resilience-drill.json` are metadata-only evidence).
-- [ ] Critical CI, backend, benchmark, and Playwright suites are green from a clean checkout.
+- [x] Critical CI, backend, benchmark, and Playwright suites are green from a clean checkout (GitHub Actions run `29714407361` on PR #1: backend, frontend/E2E, infrastructure, and secret scanning all passed).
 - [x] README instructions match the implemented commands and deployed behavior.
-- [ ] CODEX_USAGE contains real session IDs, commits, tests, and debugging examples.
+- [x] CODEX_USAGE contains real session IDs, commits, tests, and debugging examples.
 - [ ] Demo video stays under the limit and exposes no secrets/account details.
 - [ ] Submission metadata, public repository, video URL, and fallback recording are verified before deadline.
 
@@ -188,12 +188,12 @@ The following checks were run against the current working tree:
 
 ### Readiness summary
 
-- **P0 checklist:** 85 of 92 items complete (**92%**).
+- **P0 checklist:** all implementation-controlled gates are complete. The remaining Phase 8 boxes are David-owned submission artifacts (demo video and submission metadata).
 - **Local MVP:** complete and verified through backend, frontend, contract, benchmark, and Playwright gates.
 - **Cloud deployment:** ACM is issued; the pinned ECS/ALB/SQS/DynamoDB/S3/WAF stack is applied; API and worker are healthy; the Vercel custom domain is live.
-- **Public release:** partially complete. The deployed URLs, live-agent evidence, cold-start, partial-failure, and DLQ recovery evidence work; final Git review and submission packaging remain outstanding.
+- **Public release:** partially complete. The deployed URLs, committed implementation, green PR CI, live-agent evidence, cold-start, partial-failure, and DLQ recovery evidence work; final review, demo video, and submission packaging remain outstanding.
 
-These results prove the local fixture vertical slice, a real sanitized GPT-5.6 agent trace, deployed AWS/Vercel health surfaces, and the production resilience-drill matrix. The remaining P0 gates are review/commit and submission artifacts, not unverified runtime behavior.
+These results prove the local fixture vertical slice, a real sanitized GPT-5.6 agent trace, deployed AWS/Vercel health surfaces, and the production resilience-drill matrix. The remaining P0 gates are final PR review and David-owned submission artifacts, not unverified runtime behavior.
 
 ## Open-gate record — July 19, 2026
 
@@ -201,16 +201,16 @@ These results prove the local fixture vertical slice, a real sanitized GPT-5.6 a
 |---|---|---|---|---|
 | David | Sanitized live trace | `make live-smoke` captured a metadata-only trace with 23 events and no sensitive payloads | Live semantic path is now demonstrated | Preserve the trace and include it in the reviewed submission evidence |
 | David + Codex | Live queue-duration calibration | `queue-timing-live.json` records 20 deployed live durations and confirms the configured 300-second visibility / 60-second heartbeat exceed the 161-second recommendation | Continue to revisit after materially larger workloads | Review the calibration during post-hackathon scaling work |
-| David | Benchmark expectation commit | Registry and results are present only in the working tree | Expectations could still change without Git history | Review and commit expectations before any live benchmark run |
+| David + Codex | Benchmark expectation commit | Benchmark registry and expectations are in implementation commit `0d8f00c`; the bounded live audit was rerun afterward | None for the recorded run | Keep future benchmark expectation changes in a separate commit before execution |
 | David + Codex | Production resilience drills | DNS, ACM, ECS/ALB, Vercel, a deployed live audit, event replay, question/resume, deletion, controlled partial failure/DLQ handoff, and clean worker cold start are verified (`benchmark-results/resilience-drill.json`, `benchmark-results/cold-start-smoke.json`) | None | Retain metadata-only outputs for submission review |
-| David | Submission evidence | The active Codex thread and starting commit are recorded; reviewed implementation commit, public URL, video, and metadata are not yet available | Submission package is incomplete | Record the remaining evidence after review, deployment, and rehearsal |
+| David | Submission evidence | Public URL, implementation commit, and PR CI are recorded; video and final submission metadata are not yet available | Submission package is incomplete | Record and verify the final video, fallback recording, and metadata before deadline |
 
 ## Next actions for the owner
 
 Complete these in order; each item is a prerequisite for the next release gate:
 
-1. **Review the release.** Run secret scanning and the full critical test suite from a clean checkout, review the diff, and commit the implementation.
-2. **Package the submission.** Record the public URL, demo video, and submission metadata.
+1. **Review the release.** Mark PR #1 ready for review so the GPT-5.6 Terra reviewer can run, then merge after the review is accepted.
+2. **Package the submission.** Record and verify the public URL, demo video, fallback recording, and submission metadata.
 
 ## P1 — Immediate post-core improvements
 
