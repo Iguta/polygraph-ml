@@ -188,7 +188,7 @@ The following checks were run against the current working tree:
 
 ### Readiness summary
 
-- **P0 checklist:** all implementation-controlled gates are complete. The remaining Phase 8 boxes are David-owned submission artifacts (demo video and submission metadata).
+- **P0 checklist:** implementation-controlled gates are complete; the overall P0 release checklist remains open for David-owned Phase 8 submission artifacts (demo video and submission metadata).
 - **Local MVP:** complete and verified through backend, frontend, contract, benchmark, and Playwright gates.
 - **Cloud deployment:** ACM is issued; the pinned ECS/ALB/SQS/DynamoDB/S3/WAF stack is applied; API and worker are healthy; the Vercel custom domain is live.
 - **Public release:** partially complete. The deployed URLs, committed implementation, green PR CI, live-agent evidence, cold-start, partial-failure, and DLQ recovery evidence work; final review, demo video, and submission packaging remain outstanding.

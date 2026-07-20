@@ -152,7 +152,7 @@ Each event includes event ID, audit ID, monotonic sequence, timestamp, actor (`u
 
 ## 11. Queue, persistence, and idempotency
 
-The API writes audit state before enqueueing. An SQS message contains `audit_id`, operation, schema version, and idempotency key. The worker acquires a conditional lease in DynamoDB, checkpoints after each committed step, extends visibility while active, and deletes the message only after a terminal or intentionally paused checkpoint.
+The API writes an audit as `enqueue_pending` before enqueueing. An SQS message contains `audit_id`, operation, schema version, and idempotency key. If the queue send or API process fails between those steps, an idempotent retry and the worker's bounded stale-queued-audit reconciler re-enqueue the durable audit. The worker acquires a conditional lease in DynamoDB, checkpoints after each committed step, extends visibility while active, and deletes the message only after a terminal or intentionally paused checkpoint.
 
 Question pauses do not hold an SQS message indefinitely. The worker persists `waiting_for_user`, releases the job, and an answer enqueues a resume operation. Exhausted retryable failures enter the DLQ and raise an operational alarm.
 
