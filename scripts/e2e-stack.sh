@@ -30,13 +30,15 @@ if ! "${runtime_python}" - <<'PY'
 import time
 import urllib.request
 
-for attempt in range(100):
+# Cold GitHub-hosted runners can take longer than ten seconds to import the
+# analysis stack before Uvicorn binds its port.
+for attempt in range(300):
     try:
         with urllib.request.urlopen("http://127.0.0.1:8000/readyz", timeout=1) as response:
             if response.status == 200:
                 break
     except OSError:
-        if attempt == 99:
+        if attempt == 299:
             raise
         time.sleep(0.1)
 PY
