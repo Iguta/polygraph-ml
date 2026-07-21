@@ -16,7 +16,7 @@ This is an evidence log for the OpenAI Build Week submission. It must describe c
 
 ## Current repository state
 
-As of July 21, 2026, the earlier vertical slice is deployed at `polygraphml.davidiguta.com`, but the committed, not-yet-published `v0.2.0` candidate is a materially larger change and must not be confused with that deployment. The candidate adds a typed multi-mechanism agent contract, strict root manifest, full UCI Bank Marketing flagship, bounded child compute, semantic proxy/hard negative, benchmark schema v2, real executive/technical reports, deterministic repair bundles, generated frontend contracts, authenticated SSE/replay/fallback, and exact build provenance. The 82-test backend suite, static checks, frontend unit/build gates, seven-case fixture gate, Terraform validation, two candidate container builds, and six-test Playwright suite pass locally. Public immutable-SHA import, the exactly three live evaluations, clean-checkout CI/Terra review, v0.2 deployment, credential rotation, and both recordings remain open.
+As of July 21, 2026, the earlier vertical slice is deployed at `polygraphml.davidiguta.com`, but the committed `v0.2.0` candidate is a materially larger change and must not be confused with that deployment. The candidate adds a typed multi-mechanism agent contract, strict root manifest, full UCI Bank Marketing flagship, bounded child compute, semantic proxy/hard negative, benchmark schema v2, real executive/technical reports, deterministic repair bundles, generated frontend contracts, authenticated SSE/replay/fallback, and exact build provenance. The 83-test backend suite, static checks, frontend unit/build gates, seven-case fixture gate, immutable public-GitHub audit, Terraform validation, two candidate container builds, and six-test Playwright suite pass locally. The first authorized three-case live run completed but failed the quality gate; its repaired rerun requires explicit approval. Clean-checkout CI/Terra review, v0.2 deployment, credential rotation, and both recordings remain open.
 
 ## Completed Codex work
 
@@ -96,7 +96,7 @@ Codex added a measured queue-timing calibrator, a fail-closed historical live-sm
 | Gate | Result |
 |---|---|
 | v0.2 Ruff/mypy checks | Passed across 46 source files; final post-doc `make check` rerun pending |
-| Backend suite | 82 passed; 80.57% branch-aware coverage (verified in two process shards within the local execution window) |
+| Backend suite | 83 passed; 80.74% branch-aware coverage (verified in two process shards within the local execution window) |
 | Frontend lint/type/unit/build | Passed; 6 unit/component tests |
 | v0.2 Playwright workflow | 6 passed: SSE failure/fallback, refresh/replay, provenance-gated live label, reports, repair download, clean clearance, axe, and three responsive sizes |
 | v0.2 fixture benchmark | 7 cases; 6/6 pairs; 0 false confirmations/negatives; two clean controls |
@@ -105,12 +105,12 @@ Codex added a measured queue-timing calibrator, a fail-closed historical live-sm
 | API/worker container build | v0.2 candidate images build; OCI version/revision labels and containerized API health/version were verified locally |
 | Gitleaks/workflow/CI | Historical earlier-slice pass; v0.2 clean-history CI remains open |
 | AWS API and Vercel domains | Historical deployment responds; exact v0.2 `/version`/frontend SHA verification remains open |
-| Live OpenAI evaluation | Historical single case passed; new exactly-three-case v0.2 gate remains open |
+| Live OpenAI evaluation | First v0.2 three-case run completed once and failed honestly: 2 live, 1 degraded, 0/3 passed; 6,825 tokens and 43,860 ms agent latency; repaired rerun requires approval |
 | GitHub Actions PR CI | Historical run `29714407361` passed; a new v0.2 PR/Terra review is required |
 
 ## Remaining submission work
 
-- Publish the expectation commit, import the flagship through public GitHub at that immutable SHA, and run `make eval-live` exactly once.
+- Preserve the failed live record and canonical-answer/taxonomy repair; obtain explicit approval before one additional three-case live run.
 - Open the v0.2 PR to `dev`, pass clean-checkout CI and GPT-5.6 Terra review, merge through `main`, and tag `v0.2.0`.
 - Deploy frontend/backend from one SHA and pinned digests; repeat public smoke, repair download, replay/resume, deletion, and resilience gates.
 - Rotate the OpenAI key, update Secrets Manager/local ignored configuration, redeploy the worker, and repeat secret/history scanning.
@@ -140,6 +140,7 @@ Add short, specific entries as real issues occur:
 | 2026-07-21 | The frontend stayed in “Connecting” and raised a global error locally | `/version` was not included in the Vite proxy | Added the `/version` proxy and API contract coverage | Readiness/build badge appears and E2E passes |
 | 2026-07-21 | Mobile intake overflowed by 194 px | The build badge and 610 px stepper minimum expanded the document rather than an internal scroller | Hid build detail at mobile width, constrained the header, and made the stepper a bounded scroll container | Mobile overflow assertion passes at 390×844 |
 | 2026-07-21 | Repair download would fail in AWS despite successful bundle creation | The API task role lacked `s3:GetObject` needed by its presigned GET | Added the narrow permission plus S3 presign coverage and exact release/build Terraform inputs | Terraform validates and AWS adapter tests pass |
+| 2026-07-21 | First v0.2 live gate completed 0/3 despite correct flagship feature selection | Model-authored option values were not a stable evidence interface; proxy/post-outcome taxonomy was underspecified; the hard-negative failure code conflated provider and output failures | Added code-owned canonical choices, explicit mechanism precedence, and sanitized provider/output failure classes while preserving the failed evidence | Targeted planner/live tests pass; any repaired live rerun requires explicit cost approval |
 
 ## Division of labor
 

@@ -4,7 +4,9 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+import httpx
 import pytest
+from openai import APITimeoutError
 
 from polygraphml.agent.runtime import (
     AgentHypothesisProposal,
@@ -12,6 +14,7 @@ from polygraphml.agent.runtime import (
     AgentQuestionProposal,
     AuditAgentContext,
     fixture_investigation,
+    run_live_investigation,
     sanitize_dataset_profile,
     validate_investigation_plan,
 )
@@ -76,6 +79,53 @@ def test_live_agent_requires_a_non_empty_key() -> None:
     assert Settings(agent_mode="live", openai_api_key="").live_agent_ready is False
     assert Settings(agent_mode="live", openai_api_key="test-only-key").live_agent_ready is True
     assert Settings(agent_mode="fixture", openai_api_key="test-only-key").live_agent_ready is False
+
+
+async def test_live_agent_classifies_provider_timeout_without_leaking_details(
+    monkeypatch,
+) -> None:
+    async def provider_timeout(*args, **kwargs):
+        del args, kwargs
+        raise APITimeoutError(request=httpx.Request("POST", "https://api.openai.com/v1/responses"))
+
+    monkeypatch.setattr("polygraphml.agent.runtime.Runner.run", provider_timeout)
+    context = AuditAgentContext(
+        scenario=Scenario(
+            revision=1,
+            target_definition="Outcome",
+            row_entity="One row",
+            decision_time="Before outcome",
+            prediction_horizon="One day",
+            split_unit="entity",
+            intended_metric="roc_auc",
+        ),
+        dataset_profile=DatasetProfile(
+            artifact_id="art_timeout",
+            row_count=2,
+            column_count=1,
+            columns=[
+                DatasetColumnProfile(
+                    name="feature",
+                    dtype="float64",
+                    missing_fraction=0,
+                    cardinality=2,
+                )
+            ],
+            sha256="f" * 64,
+        ),
+        notebook_summary={},
+        supported_probes=(ProbeKind.FEATURE_AVAILABILITY,),
+        candidate_features=("feature",),
+        feature_context={},
+    )
+    with pytest.raises(PolygraphError) as captured:
+        await run_live_investigation(
+            Settings(agent_mode="live", openai_api_key="test-only-key"),
+            context,
+            "aud_timeout",
+        )
+    assert captured.value.code == "MODEL_REQUEST_FAILED"
+    assert "api.openai.com" not in str(captured.value)
 
 
 def test_live_plan_is_constrained_to_shipped_primary_probe() -> None:
@@ -189,7 +239,15 @@ def test_live_plan_accepts_ranked_supported_mechanisms() -> None:
         ),
         reasoning_summary="Two semantic mechanisms are plausible and the proxy provenance matters most.",
     )
-    assert validate_investigation_plan(context, plan) is plan
+    validated = validate_investigation_plan(context, plan)
+    assert validated.question is not None
+    assert validated.question.answer_type == "single_choice"
+    assert validated.question.options == [
+        "independent",
+        "derived_from_target",
+        "assigned_after_outcome",
+        "unknown",
+    ]
 
 
 def test_live_plan_rejects_incompatible_mechanism_probe() -> None:

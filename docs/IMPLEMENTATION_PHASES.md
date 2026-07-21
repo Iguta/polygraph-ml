@@ -155,7 +155,7 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] COVID-19 case is included only if reproducibility and licensing gates pass; otherwise it remains explicitly roadmap.
 - [x] Every metric in the demo script is replaced with captured benchmark output.
 - [x] The seven-case fixture gate has six exact expected pairs, zero false confirmations/negatives, and two clean controls with zero false confirmations.
-- [ ] The root-manifest flagship imports through the public GitHub API at the committed immutable SHA.
+- [x] The root-manifest flagship imported through the public GitHub API at `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`, verified five hashes, completed 27 events, and reproduced/corrected the declared metrics.
 
 ## Phase 8 — Deployment and submission readiness (P0)
 
@@ -181,9 +181,11 @@ This table distinguishes the current uncommitted v0.2 candidate from historical 
 
 | Gate | Result | Scope |
 |---|---|---|
-| Backend suite | Passed | 82 tests and 80.57% branch-aware coverage, verified in two process shards within the local execution window. Exact `make check` remains a clean-checkout CI gate. |
+| Backend suite | Passed | 83 tests and 80.74% branch-aware coverage, verified in two process shards within the local execution window. Exact `make check` remains a clean-checkout CI gate. |
 | `make test-e2e` | Passed | Six Playwright tests: forced SSE failure/polling fallback, refresh/replay, provenance-gated live label, flagship correction, executive/technical reports, repair download, clean clearance, axe checks, and mobile/laptop/1080p layout. |
 | `make benchmarks` | Passed | Seven fixture cases, six exact expected pairs, zero false confirmations/negatives, two clean controls, schema v2 raw counts and uncertainty. |
+| `make public-github-gate` | Passed | Immutable commit `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`, five verified artifacts, 27 events, expected finding and three metrics. |
+| First authorized `make eval-live` | Failed honestly | Three cases completed once: flagship hypothesis/question succeeded but answer parsing left it inconclusive; semantic proxy used the wrong mechanism; hard negative degraded. Repair is implemented; another three-call run requires explicit approval. |
 | Terraform init/validate | Passed | AWS provider configuration, exact build-SHA input, repair-download permission, and current topology validate locally. |
 | Production npm dependency audit | Passed | Zero known production dependency vulnerabilities; dev-tool advisories are reviewed separately. |
 | Prior deployed smoke/resilience evidence | Historical pass | `deployed-smoke.json`, `cold-start-smoke.json`, `resilience-drill.json`, and `queue-timing-live.json` prove the earlier deployed slice, not the v0.2 candidate. |
@@ -192,24 +194,23 @@ This table distinguishes the current uncommitted v0.2 candidate from historical 
 
 - **Locally implemented:** typed multi-mechanism agent boundary, strict manifest/GitHub import, bounded compute, flagship/target-proxy/hard-negative cases, reports, deterministic repair, generated contracts, SSE fallback/replay, and truthful provenance UI.
 - **Locally verified:** targeted backend/static checks, full fixture benchmark, Terraform validation, and full Playwright path.
-- **Still open for v0.2:** commit expectations, import the flagship from that public immutable SHA, run exactly three live evaluations, complete full clean-checkout CI/Terra review, deploy one release SHA/digest, rerun public smoke/resilience/deletion checks, rotate the key, and record both demos.
+- **Still open for v0.2:** obtain approval for one repaired three-case live gate and pass it, complete full clean-checkout CI/Terra review, deploy one release SHA/digest, rerun public smoke/resilience/deletion checks, rotate the key, and record both demos.
 - **Conditional bonus:** the Codex CLI/skill is intentionally deferred until every P0 gate and both recordings exist.
 
 ## Open-gate record — July 21, 2026
 
 | Owner | Open gate | Why it remains open | Required evidence |
 |---|---|---|---|
-| Codex + David | Public import | Manifest and benchmark expectations are committed at `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`, but that commit is not yet published for GitHub import | Successful GitHub import of the published exact SHA |
-| Codex + David | Three-case live gate | Running it earlier would violate the precommit rule and spend the bounded budget before the harness is final | One sanitized `live-evaluation.json` containing exactly three non-degraded cases |
+| Codex + David | Repaired three-case live gate | The first approved run completed but did not pass; rerunning would spend a new three-call budget | Explicit approval, then one sanitized `live-evaluation.json` containing exactly three passing non-degraded cases |
 | Codex + David | v0.2 deployment | Current public URLs serve the earlier slice | Same release SHA in Vercel badge and backend `/version`, pinned ECR digests, public smoke evidence |
 | David | Credential rotation | Must occur immediately before the final deployment per the approved plan | Rotated local/Secrets Manager key without exposing its value, then worker redeployment and scans |
 | David + Codex | Recordings/submission | No final v0.2 live or labeled fixture recording exists yet | Verified video files/URLs, duration, metadata, and no secret/account exposure |
 
 ## Next release actions
 
-1. Publish the committed expectation-bearing candidate for review.
-2. Import the flagship through the public GitHub API at that immutable SHA.
-3. Run `make eval-live` exactly once and commit both sanitized gate records.
+1. Review and commit the failed live record plus the canonical-answer/taxonomy repair.
+2. Obtain explicit approval for one additional three-case live run; do not rerun individual cases or broaden the sweep.
+3. If approved, run `make eval-live` once and commit the sanitized result.
 4. Open the PR to `dev` and let clean-checkout CI plus GPT-5.6 Terra review the exact candidate.
 5. Merge through `dev` to `main`, tag `v0.2.0`, deploy one SHA/digest, rotate the key, and repeat public smoke/security checks.
 6. Record and verify the live demo, labeled fixture fallback, and submission metadata.

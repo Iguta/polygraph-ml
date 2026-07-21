@@ -14,6 +14,13 @@ from agents import (
     gen_trace_id,
     set_default_openai_key,
 )
+from agents.exceptions import (
+    MaxTurnsExceeded,
+    ModelBehaviorError,
+    ModelRefusalError,
+    ToolTimeoutError,
+)
+from openai import APIConnectionError, APIStatusError, APITimeoutError, RateLimitError
 from openai.types.shared import Reasoning
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -137,7 +144,33 @@ missing fact, and link it to exactly one hypothesis key. The answer must be capa
 changing that hypothesis's status. Do not accuse, invent metrics, or treat association
 or ablation alone as proof of leakage. Quantitative evidence and finding transitions
 belong to deterministic application code. Return only the structured plan.
+
+Use the mechanism taxonomy precisely. Select target_proxy when feature provenance says
+the value is constructed from, assigned from, or directly encodes the target label or
+outcome—even if that construction also happens after the decision. Select post_outcome
+for a measurement that occurs after the declared decision but is not constructed from
+the target. Select metric_mismatch only for a conflict between the declared and reported
+metric contracts. Use the compatible probe for the selected mechanism. For a post_outcome
+question use options [before, after, depends, unknown]; for target_proxy use
+[independent, derived_from_target, assigned_after_outcome, unknown]. The application
+will enforce these canonical answer choices before presenting the question.
 """.strip()
+
+
+CANONICAL_QUESTION_OPTIONS: dict[FindingMechanism, list[str]] = {
+    FindingMechanism.POST_OUTCOME: ["before", "after", "depends", "unknown"],
+    FindingMechanism.TARGET_PROXY: [
+        "independent",
+        "derived_from_target",
+        "assigned_after_outcome",
+        "unknown",
+    ],
+    FindingMechanism.METRIC_MISMATCH: [
+        "reported_metric_matches_intended",
+        "reported_metric_differs",
+        "unknown",
+    ],
+}
 
 
 def create_audit_agent(settings: Settings) -> Agent[AuditAgentContext]:
@@ -198,7 +231,18 @@ def validate_investigation_plan(
             "The question referenced an unknown hypothesis key.",
             status_code=502,
         )
-    return plan
+    affected_key = plan.question.affected_hypothesis_keys[0]
+    affected = next(item for item in plan.hypotheses if item.hypothesis_key == affected_key)
+    canonical_options = CANONICAL_QUESTION_OPTIONS[affected.mechanism]
+    if plan.question.answer_type == "single_choice" and plan.question.options == canonical_options:
+        return plan
+    return plan.model_copy(
+        update={
+            "question": plan.question.model_copy(
+                update={"answer_type": "single_choice", "options": canonical_options}
+            )
+        }
+    )
 
 
 async def run_live_investigation(
@@ -231,10 +275,38 @@ async def run_live_investigation(
                 trace_metadata={"audit_id": audit_id, "prompt_schema_version": "audit-v2"},
             ),
         )
-    except Exception as exc:
+    except RateLimitError as exc:
+        raise PolygraphError(
+            "MODEL_RATE_LIMITED",
+            "The live semantic investigation was rate limited.",
+            status_code=503,
+            detail={"reason": type(exc).__name__},
+        ) from exc
+    except (APIConnectionError, APITimeoutError, APIStatusError) as exc:
+        raise PolygraphError(
+            "MODEL_REQUEST_FAILED",
+            "The live semantic investigation could not reach the model provider.",
+            status_code=503,
+            detail={"reason": type(exc).__name__},
+        ) from exc
+    except ModelRefusalError as exc:
+        raise PolygraphError(
+            "MODEL_REFUSED",
+            "The live semantic investigation was refused by the model.",
+            status_code=502,
+            detail={"reason": type(exc).__name__},
+        ) from exc
+    except (ModelBehaviorError, MaxTurnsExceeded, ToolTimeoutError) as exc:
         raise PolygraphError(
             "MODEL_OUTPUT_INVALID",
             "The live semantic investigation did not produce a valid plan.",
+            status_code=502,
+            detail={"reason": type(exc).__name__},
+        ) from exc
+    except Exception as exc:
+        raise PolygraphError(
+            "MODEL_RUNTIME_FAILED",
+            "The live semantic investigation failed before producing a valid plan.",
             status_code=502,
             detail={"reason": type(exc).__name__},
         ) from exc
@@ -280,10 +352,8 @@ def fixture_investigation(
         if mechanism == FindingMechanism.TARGET_PROXY
         else f"Is {feature} available at the declared decision moment, or only afterward?"
     )
-    question_options = (
-        ["independent", "derived_from_target", "assigned_after_outcome", "unknown"]
-        if mechanism == FindingMechanism.TARGET_PROXY
-        else ["before", "after", "depends", "unknown"]
+    question_options = CANONICAL_QUESTION_OPTIONS.get(
+        mechanism, CANONICAL_QUESTION_OPTIONS[FindingMechanism.POST_OUTCOME]
     )
     return AgentInvestigationPlan(
         hypotheses=[

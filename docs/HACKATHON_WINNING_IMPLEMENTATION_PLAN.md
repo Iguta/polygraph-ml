@@ -34,11 +34,11 @@ The release must prove three things in under three minutes:
 #### Definition of Done
 
 - [ ] A live agent independently selects at least two different supported mechanisms across predeclared cases.
-- [ ] The flagship case produces a relevant semantic hypothesis and material question without feature-name hardcoding.
+- [x] The first v0.2 live gate independently selected the flagship `post_outcome:duration` hypothesis and material question without feature-name hardcoding.
 - [x] A hard negative is cleared and no association score alone can produce `confirmed`.
 - [x] Fixture degradation remains deterministic and visibly labeled.
 - [x] Model-produced numbers cannot enter `Evidence`, `MetricComparison`, or verdict fields.
-- [ ] Sanitized traces prove the exact model and tool loop that ran.
+- [x] The sanitized v0.2 live record captures requested/resolved model, reasoning effort, token/latency counts, trace/response/request IDs, tool-result counts, mode, and failure code without payloads or chain-of-thought.
 
 ### 2. Strengthen intake, compute boundaries, and benchmarks — P0
 
@@ -71,7 +71,7 @@ The release must prove three things in under three minutes:
 #### Definition of Done
 
 - [x] Expected findings and prohibited claims are committed before any live evaluation (`16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`).
-- [ ] The UCI benchmark imports through the public GitHub path at a pinned SHA and completes end to end.
+- [x] The UCI benchmark imported and completed through the public GitHub path at `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`; the metadata-only record contains five verified artifacts and 27 events.
 - [x] GitHub ref, tree, size, manifest, download-failure, traversal, and idempotency paths have automated tests.
 - [x] A pathological estimator times out visibly as `inconclusive` without killing the worker.
 - [x] Flagship and semantic-proxy defects are found and corrected.

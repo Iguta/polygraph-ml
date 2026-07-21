@@ -49,13 +49,15 @@ Fixture output must never be presented as live GPT-5.6 evaluation. The only rele
 make eval-live
 ```
 
-That command performs exactly one live call for each of the flagship, semantic proxy, and hard negative, with at most five agent turns per call. It writes sanitized metadata to `benchmark-results/live-evaluation.json`; do not rerun or broaden it without explicit cost approval. At this snapshot, the v0.2 three-case live file has not yet been produced.
+That command performs exactly one live call for each of the flagship, semantic proxy, and hard negative, with at most five agent turns per call. It writes sanitized metadata to `benchmark-results/live-evaluation.json`; do not rerun or broaden it without explicit cost approval.
+
+The first authorized v0.2 run completed all three cases on July 21 and failed the release gate honestly. The flagship live plan independently selected `post_outcome:duration` and a material question, but its free-form answer option was not recognized by the deterministic availability parser, so no confirmation was emitted. The semantic-proxy run selected `engagement_band` but classified it as `post_outcome`, not `target_proxy`. The hard negative visibly degraded with `MODEL_OUTPUT_INVALID`, while deterministic evidence still cleared it. The record contains 6,825 total tokens and 43,860 ms of agent latency, no payloads, no sensitive data, and no raw chain-of-thought. The follow-up repair makes mechanism taxonomy explicit, replaces model-authored option values with code-owned canonical choices, and classifies provider versus output failures separately. A second live gate requires explicit cost approval; the failed record must not be overwritten or portrayed as passing evidence.
 
 `benchmark-results/queue-timing.json` is fixture-only timing evidence: seven cases, P95/max `4.1135` seconds, a 60-second minimum recommendation, and an explicit production-calibration limitation. The prior deployed slice has a separate 20-run live timing record in `queue-timing-live.json` (P95 `32.666` seconds, 161-second recommendation); it is historical evidence and must be recalibrated after deploying the larger flagship workload.
 
 ## Public GitHub gate
 
-The root manifest and artifacts pass local import/contract tests. The final public-GitHub DoD remains open until this candidate is committed and the repository endpoint imports that immutable 40-character SHA end to end. A local repository path or mutable branch does not satisfy this gate.
+The root manifest and artifacts passed local import/contract tests and the public gate at immutable commit `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`. A local repository path or mutable branch would not have satisfied this gate.
 
 ```bash
 REF=<40-character-commit-sha> make public-github-gate
