@@ -57,7 +57,7 @@ The first authorized v0.2 run completed all three cases on July 21 and failed th
 
 ## Public GitHub gate
 
-The root manifest and artifacts passed local import/contract tests and the public gate at immutable commit `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`. A local repository path or mutable branch would not have satisfied this gate.
+The root manifest and artifacts passed local import/contract tests and the public gate at immutable reviewed candidate `4925f8a4ba28fb06f96277bdb4b1ccc002f969b6`. The expected findings were already committed at `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`, before the first live evaluation. A local repository path or mutable branch would not have satisfied this gate.
 
 ```bash
 REF=<40-character-commit-sha> make public-github-gate

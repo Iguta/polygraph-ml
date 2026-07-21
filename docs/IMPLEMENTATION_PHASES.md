@@ -155,7 +155,7 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] COVID-19 case is included only if reproducibility and licensing gates pass; otherwise it remains explicitly roadmap.
 - [x] Every metric in the demo script is replaced with captured benchmark output.
 - [x] The seven-case fixture gate has six exact expected pairs, zero false confirmations/negatives, and two clean controls with zero false confirmations.
-- [x] The root-manifest flagship imported through the public GitHub API at `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`, verified five hashes, completed 27 events, and reproduced/corrected the declared metrics.
+- [x] The root-manifest flagship imported through the public GitHub API at reviewed candidate `4925f8a4ba28fb06f96277bdb4b1ccc002f969b6`, verified five hashes, completed 27 events, and reproduced/corrected the declared metrics.
 
 ## Phase 8 — Deployment and submission readiness (P0)
 
@@ -184,7 +184,7 @@ This table distinguishes the current uncommitted v0.2 candidate from historical 
 | Backend suite | Passed | 83 tests and 80.74% branch-aware coverage, verified in two process shards within the local execution window. Exact `make check` remains a clean-checkout CI gate. |
 | `make test-e2e` | Passed | Six Playwright tests: forced SSE failure/polling fallback, refresh/replay, provenance-gated live label, flagship correction, executive/technical reports, repair download, clean clearance, axe checks, and mobile/laptop/1080p layout. |
 | `make benchmarks` | Passed | Seven fixture cases, six exact expected pairs, zero false confirmations/negatives, two clean controls, schema v2 raw counts and uncertainty. |
-| `make public-github-gate` | Passed | Immutable commit `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`, five verified artifacts, 27 events, expected finding and three metrics. |
+| `make public-github-gate` | Passed | Immutable reviewed candidate `4925f8a4ba28fb06f96277bdb4b1ccc002f969b6`, five verified artifacts, 27 events, expected finding and three metrics. |
 | First authorized `make eval-live` | Failed honestly | Three cases completed once: flagship hypothesis/question succeeded but answer parsing left it inconclusive; semantic proxy used the wrong mechanism; hard negative degraded. Repair is implemented; another three-call run requires explicit approval. |
 | Terraform init/validate | Passed | AWS provider configuration, exact build-SHA input, repair-download permission, and current topology validate locally. |
 | Production npm dependency audit | Passed | Zero known production dependency vulnerabilities; dev-tool advisories are reviewed separately. |

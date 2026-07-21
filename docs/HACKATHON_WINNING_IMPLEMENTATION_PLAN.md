@@ -71,7 +71,7 @@ The release must prove three things in under three minutes:
 #### Definition of Done
 
 - [x] Expected findings and prohibited claims are committed before any live evaluation (`16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`).
-- [x] The UCI benchmark imported and completed through the public GitHub path at `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`; the metadata-only record contains five verified artifacts and 27 events.
+- [x] The UCI benchmark imported and completed through the public GitHub path at reviewed candidate `4925f8a4ba28fb06f96277bdb4b1ccc002f969b6`; the metadata-only record contains five verified artifacts and 27 events. The predeclared expectations remain anchored at `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`.
 - [x] GitHub ref, tree, size, manifest, download-failure, traversal, and idempotency paths have automated tests.
 - [x] A pathological estimator times out visibly as `inconclusive` without killing the worker.
 - [x] Flagship and semantic-proxy defects are found and corrected.

@@ -16,7 +16,7 @@ This is an evidence log for the OpenAI Build Week submission. It must describe c
 
 ## Current repository state
 
-As of July 21, 2026, the earlier vertical slice is deployed at `polygraphml.davidiguta.com`, but the committed `v0.2.0` candidate is a materially larger change and must not be confused with that deployment. The candidate adds a typed multi-mechanism agent contract, strict root manifest, full UCI Bank Marketing flagship, bounded child compute, semantic proxy/hard negative, benchmark schema v2, real executive/technical reports, deterministic repair bundles, generated frontend contracts, authenticated SSE/replay/fallback, and exact build provenance. The 94-test backend suite, static checks, frontend unit/build gates, seven-case fixture gate, immutable public-GitHub audit, Terraform validation, two candidate container builds, and six-test Playwright suite pass locally. The first authorized three-case live run completed but failed the quality gate; its repaired rerun requires explicit approval. PR #2 merged the fail-closed large-patch Terra reviewer into `dev`; all five PR #3 checks, including the corrected GPT-5.6 Terra review, pass on `609605e`. The v0.2 live rerun, merge/deployment, credential rotation, and both recordings remain open.
+As of July 21, 2026, the earlier vertical slice is deployed at `polygraphml.davidiguta.com`, but the committed `v0.2.0` candidate is a materially larger change and must not be confused with that deployment. The candidate adds a typed multi-mechanism agent contract, strict root manifest, full UCI Bank Marketing flagship, bounded child compute, semantic proxy/hard negative, benchmark schema v2, real executive/technical reports, deterministic repair bundles, generated frontend contracts, authenticated SSE/replay/fallback, and exact build provenance. The 94-test backend suite, static checks, frontend unit/build gates, seven-case fixture gate, immutable public-GitHub audit, Terraform validation, two candidate container builds, and six-test Playwright suite pass locally. The first authorized three-case live run completed but failed the quality gate; its repaired rerun requires explicit approval. PR #2 merged the fail-closed large-patch Terra reviewer into `dev`; all five PR #3 checks, including GPT-5.6 Terra, pass on `4925f8a`. The immutable public-GitHub gate also passes against that exact reviewed candidate. The v0.2 live rerun, merge/deployment, credential rotation, and both recordings remain open.
 
 ## Completed Codex work
 
@@ -112,7 +112,7 @@ Codex merged PR #2 into `dev` after GPT-5.6 Terra identified and verified repair
 | Gitleaks/workflow/CI | Historical earlier-slice pass; v0.2 clean-history CI remains open |
 | AWS API and Vercel domains | Historical deployment responds; exact v0.2 `/version`/frontend SHA verification remains open |
 | Live OpenAI evaluation | First v0.2 three-case run completed once and failed honestly: 2 live, 1 degraded, 0/3 passed; 6,825 tokens and 43,860 ms agent latency; repaired rerun requires approval |
-| GitHub Actions PR CI | PR #3 passes backend, frontend, infrastructure, secrets, and GPT-5.6 Terra on `609605e` |
+| GitHub Actions PR CI | PR #3 passes backend, frontend, infrastructure, secrets, and GPT-5.6 Terra on `4925f8a` |
 
 ## Remaining submission work
 
