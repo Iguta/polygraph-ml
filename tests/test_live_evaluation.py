@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from polygraphml.agent.runtime import (
@@ -14,6 +16,8 @@ from polygraphml.benchmarks.catalog import (
 )
 from polygraphml.benchmarks.live_evaluate import (
     LIVE_CASES,
+    ensure_fresh_output,
+    main,
     run_live_evaluation,
     select_answer,
 )
@@ -41,6 +45,39 @@ def question(options: list[str]) -> Question:
 def test_live_gate_is_exactly_three_predeclared_cases() -> None:
     assert len(LIVE_CASES) == 3
     assert len({case[0] for case in LIVE_CASES}) == 3
+
+
+def test_live_gate_refuses_to_overwrite_evidence(tmp_path: Path) -> None:
+    output = tmp_path / "live-evaluation.json"
+    output.write_text("preserved failure", encoding="utf-8")
+
+    with pytest.raises(PolygraphError, match="Refusing to overwrite") as error:
+        ensure_fresh_output(output)
+
+    assert error.value.code == "LIVE_EVALUATION_EXISTS"
+
+
+def test_live_cli_checks_output_before_any_model_call(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    output = tmp_path / "live-evaluation.json"
+    output.write_text("preserved failure", encoding="utf-8")
+    called = False
+
+    async def forbidden_live_call():
+        nonlocal called
+        called = True
+        raise AssertionError("The live evaluator must not start.")
+
+    monkeypatch.setattr(
+        "polygraphml.benchmarks.live_evaluate.run_live_evaluation", forbidden_live_call
+    )
+    monkeypatch.setattr("sys.argv", ["polygraphml-live-evaluation", "--output", str(output)])
+
+    with pytest.raises(SystemExit, match="LIVE_EVALUATION_EXISTS"):
+        main()
+
+    assert called is False
 
 
 def test_answer_selection_uses_semantics_without_rewriting_options() -> None:

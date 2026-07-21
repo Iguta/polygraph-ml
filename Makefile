@@ -49,7 +49,7 @@ benchmarks:
 	uv run polygraphml-benchmarks --output benchmark-results/latest.json
 
 eval-live:
-	uv run polygraphml-live-evaluation --output benchmark-results/live-evaluation.json
+	uv run polygraphml-live-evaluation --output benchmark-results/live-evaluation-rerun.json
 
 calibrate-queue:
 	uv run polygraphml-queue-calibration --input benchmark-results/latest.json --output benchmark-results/queue-timing.json

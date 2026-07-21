@@ -122,7 +122,7 @@ make calibrate-queue
 
 For live-agent development, place `OPENAI_API_KEY` in the ignored `.env` and set `POLYGRAPHML_AGENT_MODE=live`. Never commit or paste a key into source or logs. AWS injects the production key into the worker from Secrets Manager; Vercel and the API task do not receive it.
 
-Once configured, `make eval-live` runs exactly the three predeclared, cost-bounded live cases authorized for the release: the flagship, semantic proxy, and hard negative. It writes metadata-only results to `benchmark-results/live-evaluation.json`, records model/tool-loop provenance, and fails the gate if any run degrades to fixture mode. Do not rerun or broaden this sweep without explicit cost approval.
+Once configured, `make eval-live` runs exactly the three predeclared, cost-bounded live cases authorized for the release: the flagship, semantic proxy, and hard negative. The first failed run remains preserved at `benchmark-results/live-evaluation.json`; an approved repaired run writes metadata-only results to `benchmark-results/live-evaluation-rerun.json`. The command records model/tool-loop provenance, refuses to overwrite an existing record, and fails the gate if any run degrades to fixture mode. Do not rerun or broaden this sweep without explicit cost approval.
 
 After committing and pushing the expectation-bearing candidate, verify the manifest-first public path using its immutable commit—not a branch name:
 

@@ -92,6 +92,15 @@ LIVE_CASES = (
 )
 
 
+def ensure_fresh_output(output: Path) -> None:
+    if output.exists():
+        raise PolygraphError(
+            "LIVE_EVALUATION_EXISTS",
+            f"Refusing to overwrite the existing live evaluation record: {output}",
+            status_code=409,
+        )
+
+
 def select_answer(question: Question, intent: str) -> str:
     intent_tokens = {
         "after": ("after", "not_available"),
@@ -255,10 +264,11 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("benchmark-results/live-evaluation.json"),
+        default=Path("benchmark-results/live-evaluation-rerun.json"),
     )
     arguments = parser.parse_args()
     try:
+        ensure_fresh_output(arguments.output)
         result = asyncio.run(run_live_evaluation())
     except PolygraphError as exc:
         raise SystemExit(f"{exc.code}: {exc}") from exc

@@ -16,7 +16,7 @@ This is an evidence log for the OpenAI Build Week submission. It must describe c
 
 ## Current repository state
 
-As of July 21, 2026, the earlier vertical slice is deployed at `polygraphml.davidiguta.com`, but the committed `v0.2.0` candidate is a materially larger change and must not be confused with that deployment. The candidate adds a typed multi-mechanism agent contract, strict root manifest, full UCI Bank Marketing flagship, bounded child compute, semantic proxy/hard negative, benchmark schema v2, real executive/technical reports, deterministic repair bundles, generated frontend contracts, authenticated SSE/replay/fallback, and exact build provenance. The 92-test backend suite, static checks, frontend unit/build gates, seven-case fixture gate, immutable public-GitHub audit, Terraform validation, two candidate container builds, and six-test Playwright suite pass locally. The first authorized three-case live run completed but failed the quality gate; its repaired rerun requires explicit approval. PR #2 merged the fail-closed large-patch Terra reviewer into `dev`; PR #3 is open for the v0.2 candidate, and its first Terra pass requested one blocking contract repair plus three smaller evidence/correctness repairs. Those repairs pass locally and require a clean rerun before merge. The v0.2 deployment, credential rotation, and both recordings remain open.
+As of July 21, 2026, the earlier vertical slice is deployed at `polygraphml.davidiguta.com`, but the committed `v0.2.0` candidate is a materially larger change and must not be confused with that deployment. The candidate adds a typed multi-mechanism agent contract, strict root manifest, full UCI Bank Marketing flagship, bounded child compute, semantic proxy/hard negative, benchmark schema v2, real executive/technical reports, deterministic repair bundles, generated frontend contracts, authenticated SSE/replay/fallback, and exact build provenance. The 94-test backend suite, static checks, frontend unit/build gates, seven-case fixture gate, immutable public-GitHub audit, Terraform validation, two candidate container builds, and six-test Playwright suite pass locally. The first authorized three-case live run completed but failed the quality gate; its repaired rerun requires explicit approval. PR #2 merged the fail-closed large-patch Terra reviewer into `dev`; all five PR #3 checks, including the corrected GPT-5.6 Terra review, pass on `609605e`. The v0.2 live rerun, merge/deployment, credential rotation, and both recordings remain open.
 
 ## Completed Codex work
 
@@ -102,7 +102,7 @@ Codex merged PR #2 into `dev` after GPT-5.6 Terra identified and verified repair
 | Gate | Result |
 |---|---|
 | v0.2 Ruff/mypy checks | Passed across 47 source files in the complete July 21 `make check` run |
-| Backend suite | 92 passed; 80.81% branch-aware coverage |
+| Backend suite | 94 passed; 80.95% branch-aware coverage |
 | Frontend lint/type/unit/build | Passed; 6 unit/component tests |
 | v0.2 Playwright workflow | 6 passed: SSE failure/fallback, refresh/replay, provenance-gated live label, reports, repair download, clean clearance, axe, and three responsive sizes |
 | v0.2 fixture benchmark | 7 cases; 6/6 pairs; 0 false confirmations/negatives; two clean controls |
@@ -112,7 +112,7 @@ Codex merged PR #2 into `dev` after GPT-5.6 Terra identified and verified repair
 | Gitleaks/workflow/CI | Historical earlier-slice pass; v0.2 clean-history CI remains open |
 | AWS API and Vercel domains | Historical deployment responds; exact v0.2 `/version`/frontend SHA verification remains open |
 | Live OpenAI evaluation | First v0.2 three-case run completed once and failed honestly: 2 live, 1 degraded, 0/3 passed; 6,825 tokens and 43,860 ms agent latency; repaired rerun requires approval |
-| GitHub Actions PR CI | PR #3 is open; first frontend/infrastructure/secrets checks passed, first Terra review requested changes, and the corrected candidate awaits a clean rerun |
+| GitHub Actions PR CI | PR #3 passes backend, frontend, infrastructure, secrets, and GPT-5.6 Terra on `609605e` |
 
 ## Remaining submission work
 
@@ -147,7 +147,8 @@ Add short, specific entries as real issues occur:
 | 2026-07-21 | Mobile intake overflowed by 194 px | The build badge and 610 px stepper minimum expanded the document rather than an internal scroller | Hid build detail at mobile width, constrained the header, and made the stepper a bounded scroll container | Mobile overflow assertion passes at 390×844 |
 | 2026-07-21 | Repair download would fail in AWS despite successful bundle creation | The API task role lacked `s3:GetObject` needed by its presigned GET | Added the narrow permission plus S3 presign coverage and exact release/build Terraform inputs | Terraform validates and AWS adapter tests pass |
 | 2026-07-21 | First v0.2 live gate completed 0/3 despite correct flagship feature selection | Model-authored option values were not a stable evidence interface; proxy/post-outcome taxonomy was underspecified; the hard-negative failure code conflated provider and output failures | Added code-owned canonical choices, explicit mechanism precedence, and sanitized provider/output failure classes while preserving the failed evidence | Targeted planner/live tests pass; any repaired live rerun requires explicit cost approval |
-| 2026-07-21 | PR #3 could ship a silent empty Decision Trace and an unrelated notebook patch despite local behavior tests | The dual JSON/SSE route advertised only JSON in OpenAPI, and repair generation selected the first notebook instead of the explicit mapping | Contracted both response media types, regenerated the frontend contract, validated the mapped notebook/project, and made clean-control question scoring predeclared rather than tautological | `make check` passes 92 backend and 6 frontend tests; production build and all 6 Playwright cases pass; corrected Terra rerun pending |
+| 2026-07-21 | PR #3 could ship a silent empty Decision Trace and an unrelated notebook patch despite local behavior tests | The dual JSON/SSE route advertised only JSON in OpenAPI, and repair generation selected the first notebook instead of the explicit mapping | Contracted both response media types, regenerated the frontend contract, validated the mapped notebook/project, and made clean-control question scoring predeclared rather than tautological | The corrected Terra review passes on `609605e`; the expanded `make check` passes 94 backend and 6 frontend tests, and all 6 Playwright cases pass |
+| 2026-07-21 | A second `make eval-live` would overwrite the first failed record before its outcome was known | The CLI used one fixed output path and did not reject an existing evidence file | Preserved the failed record, moved the repaired-run target to `live-evaluation-rerun.json`, and added fail-closed overwrite protection before any model call | Unit coverage proves an existing path raises `LIVE_EVALUATION_EXISTS`; no OpenAI call was made |
 
 ## Division of labor
 

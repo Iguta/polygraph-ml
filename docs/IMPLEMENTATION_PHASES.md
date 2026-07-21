@@ -201,7 +201,7 @@ This table distinguishes the current uncommitted v0.2 candidate from historical 
 
 | Owner | Open gate | Why it remains open | Required evidence |
 |---|---|---|---|
-| Codex + David | Repaired three-case live gate | The first approved run completed but did not pass; rerunning would spend a new three-call budget | Explicit approval, then one sanitized `live-evaluation.json` containing exactly three passing non-degraded cases |
+| Codex + David | Repaired three-case live gate | The first approved run completed but did not pass; rerunning would spend a new three-call budget | Explicit approval, then one sanitized `live-evaluation-rerun.json` containing exactly three passing non-degraded cases while the failed record remains preserved |
 | Codex + David | v0.2 deployment | Current public URLs serve the earlier slice | Same release SHA in Vercel badge and backend `/version`, pinned ECR digests, public smoke evidence |
 | David | Credential rotation | Must occur immediately before the final deployment per the approved plan | Rotated local/Secrets Manager key without exposing its value, then worker redeployment and scans |
 | David + Codex | Recordings/submission | No final v0.2 live or labeled fixture recording exists yet | Verified video files/URLs, duration, metadata, and no secret/account exposure |

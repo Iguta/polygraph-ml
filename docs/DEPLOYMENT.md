@@ -78,7 +78,7 @@ REF=<40-character-commit-sha> make public-github-gate
 make eval-live
 ```
 
-The first command proves the strict root manifest, artifact hashes, immutable public-repository import, complete audit, and question/resume path. The second runs exactly the flagship, semantic proxy, and hard negative once each, refuses to pass fixture degradation, and writes only benchmark/result pairs, model/tool-loop metadata, token/latency counts, trace/request identifiers, and explicit redaction-policy flags to `benchmark-results/live-evaluation.json`. Neither command writes event payloads, prompts, sample values, reasoning text, or the key. Do not rerun or broaden the live sweep without explicit cost approval.
+The first command proves the strict root manifest, artifact hashes, immutable public-repository import, complete audit, and question/resume path. The second runs exactly the flagship, semantic proxy, and hard negative once each, refuses to pass fixture degradation, and writes only benchmark/result pairs, model/tool-loop metadata, token/latency counts, trace/request identifiers, and explicit redaction-policy flags. The first failed record remains at `benchmark-results/live-evaluation.json`; the approved repaired command targets `benchmark-results/live-evaluation-rerun.json` and refuses to overwrite it. Neither command writes event payloads, prompts, sample values, reasoning text, or the key. Do not rerun or broaden the live sweep without explicit cost approval.
 
 To verify the deployed API, SQS worker, question/resume flow, event replay, and deletion boundary together, run a disposable benchmark audit:
 
