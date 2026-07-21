@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
 import re
@@ -18,6 +20,7 @@ MAX_FILES_PER_CHUNK = 40
 MAX_PATCH_CHARACTERS_PER_CHUNK = 150_000
 MAX_TOTAL_FILES = MAX_REVIEW_CHUNKS * MAX_FILES_PER_CHUNK
 MAX_TOTAL_PATCH_CHARACTERS = MAX_REVIEW_CHUNKS * MAX_PATCH_CHARACTERS_PER_CHUNK
+MAX_OMITTED_ARTIFACT_BYTES = 10 * 1024 * 1024
 REVIEW_NONEXECUTABLE_ARTIFACTS = {
     "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.csv": (
         "non-executable public benchmark table; exact hash is pinned in the root manifest "
@@ -94,6 +97,42 @@ def github_api(
     return request_json(f"https://api.github.com{path}", token=token, method=method, body=body)
 
 
+def inspect_omitted_artifact(
+    repository: str,
+    filename: str,
+    blob_sha: object,
+    token: str,
+) -> str:
+    """Fetch, bound, hash, and credential-scan an allowlisted omitted Git blob."""
+
+    if filename not in REVIEW_NONEXECUTABLE_ARTIFACTS:
+        raise RuntimeError("Unexpected omitted artifact path.")
+    if not isinstance(blob_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", blob_sha):
+        raise RuntimeError("Omitted artifact did not include an immutable Git blob SHA.")
+    payload = github_api(f"/repos/{repository}/git/blobs/{blob_sha}", token=token)
+    if not isinstance(payload, dict) or payload.get("encoding") != "base64":
+        raise RuntimeError("Omitted artifact blob response was malformed.")
+    encoded = payload.get("content")
+    declared_size = payload.get("size")
+    if (
+        not isinstance(encoded, str)
+        or not isinstance(declared_size, int)
+        or isinstance(declared_size, bool)
+        or declared_size < 0
+        or declared_size > MAX_OMITTED_ARTIFACT_BYTES
+    ):
+        raise RuntimeError("Omitted artifact exceeded the review byte budget.")
+    try:
+        content = base64.b64decode(encoded, validate=True)
+    except ValueError as exc:
+        raise RuntimeError("Omitted artifact blob was not valid base64.") from exc
+    if len(content) != declared_size or len(content) > MAX_OMITTED_ARTIFACT_BYTES:
+        raise RuntimeError("Omitted artifact size did not match GitHub metadata.")
+    if SUSPICIOUS_CONTENT.search(content.decode("utf-8", errors="ignore")):
+        raise RuntimeError("Potential credential material detected in an omitted artifact.")
+    return hashlib.sha256(content).hexdigest()
+
+
 def collect_diff(repository: str, pull_number: int, token: str) -> tuple[list[str], bool]:
     """Fetch every safe textual patch within a bounded, chunked review budget."""
 
@@ -109,17 +148,21 @@ def collect_diff(repository: str, pull_number: int, token: str) -> tuple[list[st
         for changed_file in files:
             filename = str(changed_file.get("filename", "unknown"))
             patch = changed_file.get("patch")
-            if filename in REVIEW_NONEXECUTABLE_ARTIFACTS:
+            if isinstance(patch, str):
+                entry = f"\n--- {filename}\n{patch}\n"
+            elif filename in REVIEW_NONEXECUTABLE_ARTIFACTS:
+                sha256 = inspect_omitted_artifact(
+                    repository, filename, changed_file.get("sha"), token
+                )
                 entry = (
                     f"\n--- {filename}\n"
                     "[Binary/large non-executable content omitted by the trusted review policy. "
                     f"Rationale: {REVIEW_NONEXECUTABLE_ARTIFACTS[filename]}. "
+                    f"Fetched immutable blob SHA-256={sha256}; credential scan passed. "
                     f"status={changed_file.get('status', 'unknown')} "
                     f"additions={changed_file.get('additions', 'unknown')} "
                     f"deletions={changed_file.get('deletions', 'unknown')}]\n"
                 )
-            elif isinstance(patch, str):
-                entry = f"\n--- {filename}\n{patch}\n"
             else:
                 # Any omission outside the narrow derived-artifact allowlist remains
                 # fail-closed; a binary or oversized human-authored file needs review.

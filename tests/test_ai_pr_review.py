@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import importlib.util
 from pathlib import Path
 
@@ -80,23 +81,37 @@ def test_collect_diff_splits_a_complete_large_pr_into_safe_chunks(monkeypatch) -
 def test_collect_diff_inventories_non_executable_artifact_without_truncating(
     monkeypatch,
 ) -> None:
+    artifact = b"safe model bytes"
     files = [
         {
             "filename": "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops",
             "patch": None,
+            "sha": "a" * 40,
             "status": "added",
             "additions": 0,
             "deletions": 0,
         },
         {"filename": "src/reviewable.py", "patch": "+safe = True"},
     ]
-    monkeypatch.setattr(reviewer, "github_api", lambda *args, **kwargs: files)
+
+    def fake_github_api(path, **kwargs):
+        del kwargs
+        if "/git/blobs/" in path:
+            return {
+                "encoding": "base64",
+                "content": base64.b64encode(artifact).decode(),
+                "size": len(artifact),
+            }
+        return files
+
+    monkeypatch.setattr(reviewer, "github_api", fake_github_api)
 
     chunks, truncated = reviewer.collect_diff("owner/repo", 1, "token")
 
     assert truncated is False
     assert "Binary/large non-executable content omitted" in chunks[0]
     assert "safe adapter inspects untrusted types" in chunks[0]
+    assert "credential scan passed" in chunks[0]
     assert "src/reviewable.py" in chunks[0]
 
 
@@ -108,6 +123,43 @@ def test_collect_diff_reviews_generated_executable_client_in_full(monkeypatch) -
 
     assert truncated is False
     assert "+export const safe = true" in chunks[0]
+
+
+def test_collect_diff_reviews_allowlisted_text_when_github_supplies_patch(monkeypatch) -> None:
+    path = "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.csv"
+    files = [{"filename": path, "patch": "+review,this,text"}]
+    monkeypatch.setattr(reviewer, "github_api", lambda *args, **kwargs: files)
+
+    chunks, truncated = reviewer.collect_diff("owner/repo", 1, "token")
+
+    assert truncated is False
+    assert "+review,this,text" in chunks[0]
+    assert "content omitted" not in chunks[0].lower()
+
+
+def test_omitted_artifact_fails_closed_on_credential_material(monkeypatch) -> None:
+    artifact = b"OPENAI_API_KEY=sk-" + b"a" * 30
+    monkeypatch.setattr(
+        reviewer,
+        "github_api",
+        lambda *args, **kwargs: {
+            "encoding": "base64",
+            "content": base64.b64encode(artifact).decode(),
+            "size": len(artifact),
+        },
+    )
+
+    try:
+        reviewer.inspect_omitted_artifact(
+            "owner/repo",
+            "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops",
+            "b" * 40,
+            "token",
+        )
+    except RuntimeError as exc:
+        assert "credential material" in str(exc)
+    else:
+        raise AssertionError("Credential material must fail the omitted-artifact review.")
 
 
 def test_collect_diff_fails_closed_for_unexpected_binary(monkeypatch) -> None:
