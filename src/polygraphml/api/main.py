@@ -350,7 +350,22 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
 
     @application.get(
         "/api/v1/audits/{audit_id}/events",
-        responses={200: {"model": SuccessEnvelope[list[AuditEvent]]}},
+        response_model=SuccessEnvelope[list[AuditEvent]],
+        responses={
+            200: {
+                "description": "Ordered Decision Trace replay or event stream.",
+                "content": {
+                    "text/event-stream": {
+                        "schema": {"type": "string"},
+                        "example": (
+                            "id: evt_01...\n"
+                            "event: evidence\n"
+                            'data: {"event_id":"evt_01...","sequence":1}\n\n'
+                        ),
+                    }
+                },
+            }
+        },
     )
     async def audit_events(
         request: Request,

@@ -6,10 +6,19 @@ import pytest
 from fastapi.testclient import TestClient
 
 from polygraphml.api.container import AppContainer
+from polygraphml.api.main import app
 from polygraphml.config import Settings
 from polygraphml.domain.models import ArtifactKind
 from polygraphml.errors import PolygraphError
 from polygraphml.services.projects import ProjectService, adapter_for
+
+
+def test_decision_trace_contract_advertises_json_replay_and_sse() -> None:
+    operation = app.openapi()["paths"]["/api/v1/audits/{audit_id}/events"]["get"]
+    content = operation["responses"]["200"]["content"]
+
+    assert set(content) == {"application/json", "text/event-stream"}
+    assert content["text/event-stream"]["schema"] == {"type": "string"}
 
 
 def test_auth_scope_and_strict_request_contract(

@@ -537,6 +537,14 @@ class BenchmarkCatalog:
                     expected_status=FindingStatus.CONFIRMED,
                 )
             )
+        if benchmark_id == HARD_NEGATIVE_BENCHMARK_ID:
+            expectations.append(
+                BenchmarkExpectation(
+                    mechanism=FindingMechanism.POST_OUTCOME,
+                    feature="previous_call_duration",
+                    expected_status=FindingStatus.CLEARED,
+                )
+            )
         return BenchmarkDefinition(
             benchmark_id=benchmark_id,
             name=names[benchmark_id],
@@ -674,7 +682,13 @@ class BenchmarkCatalog:
                     "clinical diagnostic validation set."
                 ),
             ),
-            expectations=[],
+            expectations=[
+                BenchmarkExpectation(
+                    mechanism=FindingMechanism.POST_OUTCOME,
+                    feature="A07",
+                    expected_status=FindingStatus.CLEARED,
+                )
+            ],
             metric_tolerance=0.005,
             prohibited_claims=[
                 "This benchmark validates clinical diagnostic performance.",

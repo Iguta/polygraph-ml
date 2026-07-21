@@ -1298,13 +1298,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description Ordered Decision Trace replay or event stream. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["SuccessEnvelope_list_AuditEvent__"];
+                    /**
+                     * @example id: evt_01...
+                     *     event: evidence
+                     *     data: {"event_id":"evt_01...","sequence":1}
+                     */
+                    "text/event-stream": string;
                 };
             };
             /** @description Validation Error */

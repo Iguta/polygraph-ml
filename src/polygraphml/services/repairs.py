@@ -104,17 +104,17 @@ class RepairService:
         )
 
     def _notebook(self, project: Project) -> Path:
-        artifact = next(
-            (
-                item
-                for artifact_id in project.artifact_ids
-                if (item := self.repository.get(Artifact, artifact_id)) is not None
-                and item.kind == ArtifactKind.NOTEBOOK
-            ),
-            None,
-        )
-        if artifact is None:
-            raise PolygraphError("MAPPING_INCOMPLETE", "A notebook artifact is required.")
+        artifact_id = project.mapping.notebook_artifact_id
+        artifact = self.repository.get(Artifact, artifact_id) if artifact_id else None
+        if (
+            artifact is None
+            or artifact.artifact_id not in project.artifact_ids
+            or artifact.project_id != project.project_id
+            or artifact.kind != ArtifactKind.NOTEBOOK
+        ):
+            raise PolygraphError(
+                "MAPPING_INCOMPLETE", "A valid mapped notebook artifact is required."
+            )
         return self.artifacts.path_for_key(artifact.storage_key)
 
     @staticmethod

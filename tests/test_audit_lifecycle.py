@@ -337,7 +337,13 @@ async def test_public_uci_covid_model_data_and_notebook_clean_control(
     )
     assert benchmark["license_name"] == "CC BY 4.0"
     assert benchmark["source_url"].startswith("https://archive.ics.uci.edu/")
-    assert benchmark["expectations"] == []
+    assert benchmark["expectations"] == [
+        {
+            "mechanism": "post_outcome",
+            "feature": "A07",
+            "expected_status": "cleared",
+        }
+    ]
     assert benchmark["artifact_hashes"]["source_csv_sha256"]
 
     project = client.post(

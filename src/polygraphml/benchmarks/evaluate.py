@@ -120,6 +120,10 @@ async def evaluate_campaign() -> dict[str, Any]:
                 for expectation in definition.expectations
                 if expectation.expected_status == FindingStatus.CONFIRMED
             }
+            expected_question_pairs = {
+                (expectation.mechanism.value, expectation.feature)
+                for expectation in definition.expectations
+            }
             observed = {
                 (finding.mechanism.value, finding.features[0] if finding.features else "")
                 for finding in findings
@@ -171,6 +175,9 @@ async def evaluate_campaign() -> dict[str, Any]:
                     "expected_confirmed": sorted(expected_mechanisms),
                     "observed_confirmed": sorted(observed_mechanisms),
                     "expected_pairs": sorted(f"{item[0]}:{item[1]}" for item in expected),
+                    "predeclared_question_pairs": sorted(
+                        f"{item[0]}:{item[1]}" for item in expected_question_pairs
+                    ),
                     "observed_pairs": sorted(f"{item[0]}:{item[1]}" for item in observed),
                     "true_positive_count": len(matched),
                     "false_confirmation_count": len(false_confirmed),
@@ -180,9 +187,7 @@ async def evaluate_campaign() -> dict[str, Any]:
                     ),
                     "mechanism_exact_match": expected_mechanisms == observed_mechanisms,
                     "feature_pair_exact_match": expected == observed,
-                    "question_useful": question_pair in expected
-                    if expected
-                    else question_pair is not None,
+                    "question_useful": question_pair in expected_question_pairs,
                     "question_text": question.text,
                     "selected_mechanism": hypothesis.mechanism.value if hypothesis else None,
                     "selected_feature": hypothesis.features[0]

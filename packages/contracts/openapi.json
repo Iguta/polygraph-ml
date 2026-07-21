@@ -2638,9 +2638,15 @@
                 "schema": {
                   "$ref": "#/components/schemas/SuccessEnvelope_list_AuditEvent__"
                 }
+              },
+              "text/event-stream": {
+                "example": "id: evt_01...\nevent: evidence\ndata: {\"event_id\":\"evt_01...\",\"sequence\":1}\n\n",
+                "schema": {
+                  "type": "string"
+                }
               }
             },
-            "description": "Successful Response"
+            "description": "Ordered Decision Trace replay or event stream."
           },
           "422": {
             "content": {

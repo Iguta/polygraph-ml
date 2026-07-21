@@ -31,7 +31,7 @@
     "false_negatives": 0,
     "feature_pair_exact_match_denominator": 7,
     "feature_pair_exact_match_numerator": 7,
-    "latency_seconds": 22.923,
+    "latency_seconds": 22.5328,
     "max_corrected_metric_error": 0.0,
     "mechanism_exact_match_denominator": 7,
     "mechanism_exact_match_numerator": 7,
@@ -73,7 +73,7 @@
       "false_confirmations": [],
       "false_negative_count": 0,
       "feature_pair_exact_match": true,
-      "latency_seconds": 4.0318,
+      "latency_seconds": 4.0768,
       "license": "CC BY 4.0",
       "mechanism_exact_match": true,
       "observed_confirmed": [
@@ -83,6 +83,9 @@
         "post_outcome:duration"
       ],
       "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "post_outcome:duration"
+      ],
       "question_text": "Is duration available at the declared decision moment, or only afterward?",
       "question_useful": true,
       "reproduction_error": 4.5993920438913705e-07,
@@ -113,7 +116,7 @@
       "false_confirmations": [],
       "false_negative_count": 0,
       "feature_pair_exact_match": true,
-      "latency_seconds": 3.6583,
+      "latency_seconds": 3.6672,
       "license": "CC0-1.0",
       "mechanism_exact_match": true,
       "observed_confirmed": [
@@ -125,6 +128,10 @@
         "post_outcome:call_duration"
       ],
       "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "group_contamination:household_id",
+        "post_outcome:call_duration"
+      ],
       "question_text": "Is call_duration available at the declared decision moment, or only afterward?",
       "question_useful": true,
       "reproduction_error": 0.0,
@@ -153,7 +160,7 @@
       "false_confirmations": [],
       "false_negative_count": 0,
       "feature_pair_exact_match": true,
-      "latency_seconds": 3.8237,
+      "latency_seconds": 3.7681,
       "license": "CC0-1.0",
       "mechanism_exact_match": true,
       "observed_confirmed": [
@@ -163,6 +170,9 @@
         "post_outcome:call_duration"
       ],
       "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "post_outcome:call_duration"
+      ],
       "question_text": "Is call_duration available at the declared decision moment, or only afterward?",
       "question_useful": true,
       "reproduction_error": 0.0,
@@ -191,7 +201,7 @@
       "false_confirmations": [],
       "false_negative_count": 0,
       "feature_pair_exact_match": true,
-      "latency_seconds": 2.602,
+      "latency_seconds": 2.5419,
       "license": "CC0-1.0",
       "mechanism_exact_match": true,
       "observed_confirmed": [
@@ -201,6 +211,9 @@
         "group_contamination:household_id"
       ],
       "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "group_contamination:household_id"
+      ],
       "question_text": "Is call_duration available at the declared decision moment, or only afterward?",
       "question_useful": false,
       "reproduction_error": 0.0,
@@ -229,7 +242,7 @@
       "false_confirmations": [],
       "false_negative_count": 0,
       "feature_pair_exact_match": true,
-      "latency_seconds": 3.7992,
+      "latency_seconds": 3.6466,
       "license": "CC0-1.0",
       "mechanism_exact_match": true,
       "observed_confirmed": [
@@ -239,6 +252,9 @@
         "target_proxy:engagement_band"
       ],
       "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "target_proxy:engagement_band"
+      ],
       "question_text": "Is engagement_band derived from, assigned after, or independent of the prediction target?",
       "question_useful": true,
       "reproduction_error": 0.0,
@@ -263,12 +279,15 @@
       "false_confirmations": [],
       "false_negative_count": 0,
       "feature_pair_exact_match": true,
-      "latency_seconds": 2.5485,
+      "latency_seconds": 2.4283,
       "license": "CC0-1.0",
       "mechanism_exact_match": true,
       "observed_confirmed": [],
       "observed_pairs": [],
       "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "post_outcome:previous_call_duration"
+      ],
       "question_text": "Is previous_call_duration available at the declared decision moment, or only afterward?",
       "question_useful": true,
       "reproduction_error": 3.799283154748423e-07,
@@ -293,12 +312,15 @@
       "false_confirmations": [],
       "false_negative_count": 0,
       "feature_pair_exact_match": true,
-      "latency_seconds": 2.4545,
+      "latency_seconds": 2.3996,
       "license": "CC BY 4.0",
       "mechanism_exact_match": true,
       "observed_confirmed": [],
       "observed_pairs": [],
       "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "post_outcome:A07"
+      ],
       "question_text": "Is A07 available at the declared decision moment, or only afterward?",
       "question_useful": true,
       "reproduction_error": 0.0,

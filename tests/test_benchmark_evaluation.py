@@ -63,6 +63,8 @@ async def test_release_benchmark_gate_has_no_false_confirmations() -> None:
     )
     assert hard_negative["observed_confirmed"] == []
     assert hard_negative["false_confirmation_count"] == 0
+    assert hard_negative["predeclared_question_pairs"] == ["post_outcome:previous_call_duration"]
+    assert hard_negative["question_useful"] is True
     covid = next(
         case
         for case in result["cases"]
@@ -70,4 +72,6 @@ async def test_release_benchmark_gate_has_no_false_confirmations() -> None:
     )
     assert covid["observed_confirmed"] == []
     assert covid["license"] == "CC BY 4.0"
+    assert covid["predeclared_question_pairs"] == ["post_outcome:A07"]
+    assert covid["question_useful"] is True
     assert result["ablation_comparison"]["deterministic_only"]["can_confirm"] is False
