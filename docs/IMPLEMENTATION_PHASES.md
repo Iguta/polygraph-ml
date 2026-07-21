@@ -169,7 +169,7 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] OpenAI key is stored in Secrets Manager and removed from any ad hoc deployment configuration.
 - [x] Repository and Git history pass secret scanning.
 - [x] Cold start, live audit, refresh/replay, question/resume, partial failure, and DLQ drills are recorded (`benchmark-results/cold-start-smoke.json` and `benchmark-results/resilience-drill.json` are metadata-only evidence).
-- [ ] Critical v0.2 CI, backend, benchmark, and Playwright suites are green from a clean checkout. Historical PR #1 run `29714407361` covers the earlier slice only.
+- [x] Critical v0.2 CI, backend, benchmark, and Playwright suites are green from a clean checkout on PR #3; backend, frontend, infrastructure, secrets, and GPT-5.6 Terra pass at `9951d26`.
 - [ ] README instructions and public `/version` metadata match the deployed v0.2 behavior and exact SHA.
 - [x] CODEX_USAGE contains real session IDs, commits, tests, and debugging examples.
 - [ ] Demo video stays under the limit and exposes no secrets/account details.
@@ -177,11 +177,11 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 
 ## Verification snapshot — July 21, 2026
 
-This table distinguishes the current uncommitted v0.2 candidate from historical evidence for the already deployed earlier slice.
+This table distinguishes the reviewed v0.2 candidate from historical evidence for the already deployed earlier slice.
 
 | Gate | Result | Scope |
 |---|---|---|
-| Backend suite | Passed | 83 tests and 80.74% branch-aware coverage, verified in two process shards within the local execution window. Exact `make check` remains a clean-checkout CI gate. |
+| Backend suite | Passed | 94 tests and 80.95% branch-aware coverage locally; the same backend gate passes from a clean checkout on PR #3. |
 | `make test-e2e` | Passed | Six Playwright tests: forced SSE failure/polling fallback, refresh/replay, provenance-gated live label, flagship correction, executive/technical reports, repair download, clean clearance, axe checks, and mobile/laptop/1080p layout. |
 | `make benchmarks` | Passed | Seven fixture cases, six exact expected pairs, zero false confirmations/negatives, two clean controls, schema v2 raw counts and uncertainty. |
 | `make public-github-gate` | Passed | Immutable reviewed candidate `4925f8a4ba28fb06f96277bdb4b1ccc002f969b6`, five verified artifacts, 27 events, expected finding and three metrics. |
@@ -193,8 +193,8 @@ This table distinguishes the current uncommitted v0.2 candidate from historical 
 ### Current readiness
 
 - **Locally implemented:** typed multi-mechanism agent boundary, strict manifest/GitHub import, bounded compute, flagship/target-proxy/hard-negative cases, reports, deterministic repair, generated contracts, SSE fallback/replay, and truthful provenance UI.
-- **Locally verified:** targeted backend/static checks, full fixture benchmark, Terraform validation, and full Playwright path.
-- **Still open for v0.2:** obtain approval for one repaired three-case live gate and pass it, complete full clean-checkout CI/Terra review, deploy one release SHA/digest, rerun public smoke/resilience/deletion checks, rotate the key, and record both demos.
+- **Verified:** complete backend/static/frontend checks, full fixture benchmark, immutable public-GitHub gate, Terraform validation, full Playwright path, and clean-checkout CI/Terra review.
+- **Still open for v0.2:** obtain approval for one repaired three-case live gate and pass it, deploy one release SHA/digest, rerun public smoke/resilience/deletion checks, rotate the key, and record both demos.
 - **Conditional bonus:** the Codex CLI/skill is intentionally deferred until every P0 gate and both recordings exist.
 
 ## Open-gate record — July 21, 2026
@@ -208,12 +208,11 @@ This table distinguishes the current uncommitted v0.2 candidate from historical 
 
 ## Next release actions
 
-1. Review and commit the failed live record plus the canonical-answer/taxonomy repair.
-2. Obtain explicit approval for one additional three-case live run; do not rerun individual cases or broaden the sweep.
-3. If approved, run `make eval-live` once and commit the sanitized result.
-4. Open the PR to `dev` and let clean-checkout CI plus GPT-5.6 Terra review the exact candidate.
-5. Merge through `dev` to `main`, tag `v0.2.0`, deploy one SHA/digest, rotate the key, and repeat public smoke/security checks.
-6. Record and verify the live demo, labeled fixture fallback, and submission metadata.
+1. Obtain explicit approval for one additional three-case live run; do not rerun individual cases or broaden the sweep.
+2. If approved, run `make eval-live` once and commit the sanitized result without changing the preserved failure record.
+3. Let PR #3 clean-checkout CI and GPT-5.6 Terra review that exact evidence-bearing candidate.
+4. Merge through `dev` to `main`, tag `v0.2.0`, deploy one SHA/digest, rotate the key, and repeat public smoke/security checks.
+5. Record and verify the live demo, labeled fixture fallback, and submission metadata.
 
 ## P1 — Immediate post-core improvements
 

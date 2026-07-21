@@ -109,15 +109,15 @@ Codex merged PR #2 into `dev` after GPT-5.6 Terra identified and verified repair
 | Terraform 1.14.3 init/validate | Passed with AWS provider 6.55.0 and current build/IAM changes |
 | Production npm audit | Passed with zero production vulnerabilities |
 | API/worker container build | v0.2 candidate images build; OCI version/revision labels and containerized API health/version were verified locally |
-| Gitleaks/workflow/CI | Historical earlier-slice pass; v0.2 clean-history CI remains open |
+| Gitleaks/workflow/CI | Full-history Gitleaks scan and PR #3 clean-checkout secrets workflow pass |
 | AWS API and Vercel domains | Historical deployment responds; exact v0.2 `/version`/frontend SHA verification remains open |
 | Live OpenAI evaluation | First v0.2 three-case run completed once and failed honestly: 2 live, 1 degraded, 0/3 passed; 6,825 tokens and 43,860 ms agent latency; repaired rerun requires approval |
-| GitHub Actions PR CI | PR #3 passes backend, frontend, infrastructure, secrets, and GPT-5.6 Terra on `4925f8a` |
+| GitHub Actions PR CI | PR #3 passes backend, frontend, infrastructure, secrets, and GPT-5.6 Terra on evidence commit `9951d26` |
 
 ## Remaining submission work
 
-- Preserve the failed live record and canonical-answer/taxonomy repair; obtain explicit approval before one additional three-case live run.
-- Pass PR #3 clean-checkout CI and the corrected GPT-5.6 Terra review, merge through `dev` and `main`, and tag `v0.2.0`.
+- Obtain explicit approval before one additional three-case live run; the failed record and repaired-run output are now separately protected.
+- After a passing live record receives PR #3 CI/Terra review, merge through `dev` and `main`, and tag `v0.2.0`.
 - Deploy frontend/backend from one SHA and pinned digests; repeat public smoke, repair download, replay/resume, deletion, and resilience gates.
 - Rotate the OpenAI key, update Secrets Manager/local ignored configuration, redeploy the worker, and repeat secret/history scanning.
 - Record and verify the live demo, labeled fixture fallback, and submission metadata.
