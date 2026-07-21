@@ -11,12 +11,12 @@ This is an evidence log for the OpenAI Build Week submission. It must describe c
 - Starting documentation commit: `a4291caadc53fe27c7fefbda501f29076d52b227` (`docs: PolygraphML starter documentation suite`).
 - Implementation commit: `0d8f00caefb6150ff3d86d30396c478a030612d9` (`feat: ship PolygraphML audit platform`).
 - Release-branch CI hardening: `2e3ee05`, `fa11d28`, `f738301`, and `e924c84`.
-- Review PR: [#1 — prior `agent/polygraphml-release` release](https://github.com/Iguta/polygraph-ml/pull/1), merged at `22660b7` and present on both `origin/dev` and `origin/main`. The v0.2 candidate is on `agent/hackathon-winning-slice` and has no PR yet.
+- Review PRs: [#1 — prior `agent/polygraphml-release` release](https://github.com/Iguta/polygraph-ml/pull/1), merged at `22660b7`; [#2 — trusted large-patch Terra policy](https://github.com/Iguta/polygraph-ml/pull/2), merged at `7424a1f`; and [#3 — v0.2 hackathon-winning slice](https://github.com/Iguta/polygraph-ml/pull/3), open from `agent/hackathon-winning-slice` to `dev`.
 - v0.2 expectation-bearing implementation commit: `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5` (`feat: ship hackathon-winning evidence slice`), created before any v0.2 live evaluation.
 
 ## Current repository state
 
-As of July 21, 2026, the earlier vertical slice is deployed at `polygraphml.davidiguta.com`, but the committed `v0.2.0` candidate is a materially larger change and must not be confused with that deployment. The candidate adds a typed multi-mechanism agent contract, strict root manifest, full UCI Bank Marketing flagship, bounded child compute, semantic proxy/hard negative, benchmark schema v2, real executive/technical reports, deterministic repair bundles, generated frontend contracts, authenticated SSE/replay/fallback, and exact build provenance. The 94-test backend suite, static checks, frontend unit/build gates, seven-case fixture gate, immutable public-GitHub audit, Terraform validation, two candidate container builds, and six-test Playwright suite pass locally. The first authorized three-case live run completed but failed the quality gate; its repaired rerun requires explicit approval. PR #2 merged the fail-closed large-patch Terra reviewer into `dev`; all five PR #3 checks, including GPT-5.6 Terra, pass on `4925f8a`. The immutable public-GitHub gate also passes against that exact reviewed candidate. The v0.2 live rerun, merge/deployment, credential rotation, and both recordings remain open.
+As of July 21, 2026, the earlier vertical slice is deployed at `polygraphml.davidiguta.com`, but the committed `v0.2.0` candidate is a materially larger change and must not be confused with that deployment. The candidate adds a typed multi-mechanism agent contract, strict root manifest, full UCI Bank Marketing flagship, bounded child compute, semantic proxy/hard negative, benchmark schema v2, real executive/technical reports, deterministic repair bundles, generated frontend contracts, authenticated SSE/replay/fallback, and exact build provenance. The 94-test backend suite, static checks, frontend unit/build gates, seven-case fixture gate, immutable public-GitHub audit, Terraform validation, two candidate container builds, and six-test Playwright suite pass locally. The explicitly approved repaired three-case live gate now passes 3/3 with two independently selected mechanisms and no degradation, while the first failed record remains preserved. PR #2 merged the fail-closed large-patch Terra reviewer into `dev`; all five PR #3 checks, including GPT-5.6 Terra, passed at `13a88e5` before the live evidence commit. The merge/deployment, credential rotation, and both recordings remain open.
 
 ## Completed Codex work
 
@@ -111,13 +111,12 @@ Codex merged PR #2 into `dev` after GPT-5.6 Terra identified and verified repair
 | API/worker container build | v0.2 candidate images build; OCI version/revision labels and containerized API health/version were verified locally |
 | Gitleaks/workflow/CI | Full-history Gitleaks scan and PR #3 clean-checkout secrets workflow pass |
 | AWS API and Vercel domains | Historical deployment responds; exact v0.2 `/version`/frontend SHA verification remains open |
-| Live OpenAI evaluation | First v0.2 three-case run completed once and failed honestly: 2 live, 1 degraded, 0/3 passed; 6,825 tokens and 43,860 ms agent latency; repaired rerun requires approval |
-| GitHub Actions PR CI | PR #3 passes backend, frontend, infrastructure, secrets, and GPT-5.6 Terra on evidence commit `9951d26` |
+| Live OpenAI evaluation | Approved repaired run passed exactly 3/3 live cases with zero degradation: two confirmed mechanisms plus one hard-negative clearance; 10,774 tokens and 65,408 ms agent latency. The first failed run remains separately preserved. |
+| GitHub Actions PR CI | PR #3 passes backend, frontend, infrastructure, secrets, and GPT-5.6 Terra at `13a88e5`; the live evidence commit must receive the same review before merge |
 
 ## Remaining submission work
 
-- Obtain explicit approval before one additional three-case live run; the failed record and repaired-run output are now separately protected.
-- After a passing live record receives PR #3 CI/Terra review, merge through `dev` and `main`, and tag `v0.2.0`.
+- After the passing live record receives PR #3 CI/Terra review, merge through `dev` and `main`, and tag `v0.2.0`.
 - Deploy frontend/backend from one SHA and pinned digests; repeat public smoke, repair download, replay/resume, deletion, and resilience gates.
 - Rotate the OpenAI key, update Secrets Manager/local ignored configuration, redeploy the worker, and repeat secret/history scanning.
 - Record and verify the live demo, labeled fixture fallback, and submission metadata.
@@ -149,6 +148,7 @@ Add short, specific entries as real issues occur:
 | 2026-07-21 | First v0.2 live gate completed 0/3 despite correct flagship feature selection | Model-authored option values were not a stable evidence interface; proxy/post-outcome taxonomy was underspecified; the hard-negative failure code conflated provider and output failures | Added code-owned canonical choices, explicit mechanism precedence, and sanitized provider/output failure classes while preserving the failed evidence | Targeted planner/live tests pass; any repaired live rerun requires explicit cost approval |
 | 2026-07-21 | PR #3 could ship a silent empty Decision Trace and an unrelated notebook patch despite local behavior tests | The dual JSON/SSE route advertised only JSON in OpenAPI, and repair generation selected the first notebook instead of the explicit mapping | Contracted both response media types, regenerated the frontend contract, validated the mapped notebook/project, and made clean-control question scoring predeclared rather than tautological | The corrected Terra review passes on `609605e`; the expanded `make check` passes 94 backend and 6 frontend tests, and all 6 Playwright cases pass |
 | 2026-07-21 | A second `make eval-live` would overwrite the first failed record before its outcome was known | The CLI used one fixed output path and did not reject an existing evidence file | Preserved the failed record, moved the repaired-run target to `live-evaluation-rerun.json`, and added fail-closed overwrite protection before any model call | Unit coverage proves an existing path raises `LIVE_EVALUATION_EXISTS`; no OpenAI call was made |
+| 2026-07-21 | First v0.2 live gate failed 0/3 after finding the right flagship feature | Canonical answers and mechanism precedence were not enforced strongly enough at the model/application boundary | With explicit approval, ran the repaired three-case gate exactly once without individual retries | 3/3 passed live: flagship and semantic proxy confirmed under distinct mechanisms, hard negative cleared, zero degradation; sanitized record SHA-256 `aea0d4a8eae05d6876cf27e25e964ffaca7722a447ca801892ca86d6f85a413c` |
 
 ## Division of labor
 

@@ -33,7 +33,7 @@ The release must prove three things in under three minutes:
 
 #### Definition of Done
 
-- [ ] A live agent independently selects at least two different supported mechanisms across predeclared cases.
+- [x] The repaired three-case live gate independently selected `post_outcome` and `target_proxy` across the predeclared cases, with no degradation.
 - [x] The first v0.2 live gate independently selected the flagship `post_outcome:duration` hypothesis and material question without feature-name hardcoding.
 - [x] A hard negative is cleared and no association score alone can produce `confirmed`.
 - [x] Fixture degradation remains deterministic and visibly labeled.

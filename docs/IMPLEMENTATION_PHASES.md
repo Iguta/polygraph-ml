@@ -97,7 +97,7 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] Answer persistence and resume reevaluate the affected hypothesis.
 - [x] Reasoning summaries, if enabled, are labeled and stored separately from evidence.
 - [x] Schema failure retries are bounded and deterministic analysis remains available after degradation.
-- [ ] The v0.2 three-case live gate proves at least two mechanisms, the flagship question, and hard-negative clearance without degradation. Historical `live-trace.json` proves the earlier single-mechanism path only.
+- [x] The v0.2 repaired three-case live gate proves `post_outcome` and `target_proxy`, the flagship question, and hard-negative clearance with all three cases live and no degradation (`benchmark-results/live-evaluation-rerun.json`).
 
 ## Phase 5 — Durable AWS execution and event replay (P0)
 
@@ -169,7 +169,7 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] OpenAI key is stored in Secrets Manager and removed from any ad hoc deployment configuration.
 - [x] Repository and Git history pass secret scanning.
 - [x] Cold start, live audit, refresh/replay, question/resume, partial failure, and DLQ drills are recorded (`benchmark-results/cold-start-smoke.json` and `benchmark-results/resilience-drill.json` are metadata-only evidence).
-- [x] Critical v0.2 CI, backend, benchmark, and Playwright suites are green from a clean checkout on PR #3; backend, frontend, infrastructure, secrets, and GPT-5.6 Terra pass at `9951d26`.
+- [x] Critical v0.2 CI, backend, benchmark, and Playwright suites are green from a clean checkout on PR #3; backend, frontend, infrastructure, secrets, and GPT-5.6 Terra pass at `13a88e5` before the live evidence commit.
 - [ ] README instructions and public `/version` metadata match the deployed v0.2 behavior and exact SHA.
 - [x] CODEX_USAGE contains real session IDs, commits, tests, and debugging examples.
 - [ ] Demo video stays under the limit and exposes no secrets/account details.
@@ -186,6 +186,7 @@ This table distinguishes the reviewed v0.2 candidate from historical evidence fo
 | `make benchmarks` | Passed | Seven fixture cases, six exact expected pairs, zero false confirmations/negatives, two clean controls, schema v2 raw counts and uncertainty. |
 | `make public-github-gate` | Passed | Immutable reviewed candidate `4925f8a4ba28fb06f96277bdb4b1ccc002f969b6`, five verified artifacts, 27 events, expected finding and three metrics. |
 | First authorized `make eval-live` | Failed honestly | Three cases completed once: flagship hypothesis/question succeeded but answer parsing left it inconclusive; semantic proxy used the wrong mechanism; hard negative degraded. Repair is implemented; another three-call run requires explicit approval. |
+| Approved repaired `make eval-live` | Passed | Exactly three cases, all live: flagship `post_outcome:duration` confirmed, `target_proxy:engagement_band` confirmed, and `post_outcome:previous_call_duration` cleared with zero false confirmation; 10,774 tokens and 65,408 ms aggregate agent latency. |
 | Terraform init/validate | Passed | AWS provider configuration, exact build-SHA input, repair-download permission, and current topology validate locally. |
 | Production npm dependency audit | Passed | Zero known production dependency vulnerabilities; dev-tool advisories are reviewed separately. |
 | Prior deployed smoke/resilience evidence | Historical pass | `deployed-smoke.json`, `cold-start-smoke.json`, `resilience-drill.json`, and `queue-timing-live.json` prove the earlier deployed slice, not the v0.2 candidate. |
@@ -194,25 +195,22 @@ This table distinguishes the reviewed v0.2 candidate from historical evidence fo
 
 - **Locally implemented:** typed multi-mechanism agent boundary, strict manifest/GitHub import, bounded compute, flagship/target-proxy/hard-negative cases, reports, deterministic repair, generated contracts, SSE fallback/replay, and truthful provenance UI.
 - **Verified:** complete backend/static/frontend checks, full fixture benchmark, immutable public-GitHub gate, Terraform validation, full Playwright path, and clean-checkout CI/Terra review.
-- **Still open for v0.2:** obtain approval for one repaired three-case live gate and pass it, deploy one release SHA/digest, rerun public smoke/resilience/deletion checks, rotate the key, and record both demos.
+- **Still open for v0.2:** review the new live evidence in PR #3, deploy one release SHA/digest, rerun public smoke/resilience/deletion checks, rotate the key, and record both demos.
 - **Conditional bonus:** the Codex CLI/skill is intentionally deferred until every P0 gate and both recordings exist.
 
 ## Open-gate record — July 21, 2026
 
 | Owner | Open gate | Why it remains open | Required evidence |
 |---|---|---|---|
-| Codex + David | Repaired three-case live gate | The first approved run completed but did not pass; rerunning would spend a new three-call budget | Explicit approval, then one sanitized `live-evaluation-rerun.json` containing exactly three passing non-degraded cases while the failed record remains preserved |
 | Codex + David | v0.2 deployment | Current public URLs serve the earlier slice | Same release SHA in Vercel badge and backend `/version`, pinned ECR digests, public smoke evidence |
 | David | Credential rotation | Must occur immediately before the final deployment per the approved plan | Rotated local/Secrets Manager key without exposing its value, then worker redeployment and scans |
 | David + Codex | Recordings/submission | No final v0.2 live or labeled fixture recording exists yet | Verified video files/URLs, duration, metadata, and no secret/account exposure |
 
 ## Next release actions
 
-1. Obtain explicit approval for one additional three-case live run; do not rerun individual cases or broaden the sweep.
-2. If approved, run `make eval-live` once and commit the sanitized result without changing the preserved failure record.
-3. Let PR #3 clean-checkout CI and GPT-5.6 Terra review that exact evidence-bearing candidate.
-4. Merge through `dev` to `main`, tag `v0.2.0`, deploy one SHA/digest, rotate the key, and repeat public smoke/security checks.
-5. Record and verify the live demo, labeled fixture fallback, and submission metadata.
+1. Let PR #3 clean-checkout CI and GPT-5.6 Terra review the exact live-evidence-bearing candidate.
+2. Merge through `dev` to `main`, tag `v0.2.0`, deploy one SHA/digest, rotate the key, and repeat public smoke/security checks.
+3. Record and verify the live demo, labeled fixture fallback, and submission metadata.
 
 ## P1 — Immediate post-core improvements
 

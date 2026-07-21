@@ -142,7 +142,7 @@ This verifies queue processing, question/resume, event replay, and deletion, the
 
 ## Status
 
-OpenAI Build Week 2026 — the `v0.2.0` candidate has a locally verified flagship audit, typed multi-mechanism agent contract, bounded compute, repair bundle, generated frontend contracts, durable SSE/replay UI, seven-case fixture gate, and two clean controls with zero false confirmations. The previously deployed AWS/Vercel vertical slice remains live, but this candidate is **not** the public release until its three-case live evaluation, pinned public-GitHub import, reviewed commit, same-SHA deployment, recordings, and final smoke checks pass. Track: **Developer Tools**.
+OpenAI Build Week 2026 — the `v0.2.0` candidate has a locally verified flagship audit, typed multi-mechanism agent contract, bounded compute, repair bundle, generated frontend contracts, durable SSE/replay UI, seven-case fixture gate, two clean controls with zero false confirmations, a passing immutable public-GitHub audit, and a passing 3/3 live GPT-5.6 Sol gate. The previously deployed AWS/Vercel vertical slice remains live, but this candidate is **not** the public release until the evidence-bearing commit is reviewed, merged, deployed from one SHA, recorded, and smoke-tested. Track: **Developer Tools**.
 
 ## License
 
