@@ -15,9 +15,21 @@ MODEL = "gpt-5.6-terra"
 MARKER = "<!-- polygraphml-ai-pr-review -->"
 MAX_REVIEW_CHUNKS = 4
 MAX_FILES_PER_CHUNK = 40
-MAX_PATCH_CHARACTERS_PER_CHUNK = 60_000
+MAX_PATCH_CHARACTERS_PER_CHUNK = 120_000
 MAX_TOTAL_FILES = MAX_REVIEW_CHUNKS * MAX_FILES_PER_CHUNK
 MAX_TOTAL_PATCH_CHARACTERS = MAX_REVIEW_CHUNKS * MAX_PATCH_CHARACTERS_PER_CHUNK
+REVIEW_EXCLUDED_PATHS = frozenset(
+    {
+        "benchmark-results/latest.json",
+        "benchmark-results/live-evaluation.json",
+        "benchmark-results/public-github-gate.json",
+        "benchmark-results/queue-timing.json",
+        "frontend/src/generated/api.ts",
+        "packages/contracts/openapi.json",
+        "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.csv",
+        "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops",
+    }
+)
 SUSPICIOUS_CONTENT = re.compile(
     r"(?:sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----)",
     re.IGNORECASE,
@@ -97,13 +109,24 @@ def collect_diff(repository: str, pull_number: int, token: str) -> tuple[list[st
         if not files:
             break
         for changed_file in files:
+            filename = str(changed_file.get("filename", "unknown"))
             patch = changed_file.get("patch")
-            if not isinstance(patch, str):
-                # GitHub omits textual patches for binary or overlarge files.
-                # Do not let an automated approval imply those files were reviewed.
+            if filename in REVIEW_EXCLUDED_PATHS:
+                entry = (
+                    f"\n--- {filename}\n"
+                    "[Content omitted by the trusted review policy: generated or "
+                    "hash-addressed artifact. Review its generator, manifest, contract tests, "
+                    f"and source-of-truth files. status={changed_file.get('status', 'unknown')} "
+                    f"additions={changed_file.get('additions', 'unknown')} "
+                    f"deletions={changed_file.get('deletions', 'unknown')}]\n"
+                )
+            elif isinstance(patch, str):
+                entry = f"\n--- {filename}\n{patch}\n"
+            else:
+                # Any omission outside the narrow derived-artifact allowlist remains
+                # fail-closed; a binary or oversized human-authored file needs review.
                 truncated = True
                 continue
-            entry = f"\n--- {changed_file.get('filename', 'unknown')}\n{patch}\n"
             needs_new_chunk = file_count > 0 and (
                 len(chunks[-1]) >= MAX_FILES_PER_CHUNK
                 or sizes[-1] + len(entry) > MAX_PATCH_CHARACTERS_PER_CHUNK

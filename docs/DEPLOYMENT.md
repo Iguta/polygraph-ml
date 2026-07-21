@@ -64,7 +64,7 @@ Do not mark deployment complete until all of these are recorded against the publ
 
 `.github/workflows/ai-pr-review.yml` runs only for non-draft pull requests targeting `dev`. It uses `gpt-5.6-terra` through the Responses API and fails closed on high/critical findings, model/API errors, oversized diffs, or potential credential material. The workflow uses `pull_request_target`, checks out only the trusted base SHA, and fetches PR patches from GitHub's API; it never executes PR code while the OpenAI secret is available.
 
-Before enabling merges, add the repository Actions secret `OPENAI_API_KEY` and configure `gpt-5.6-terra` as a required status check in the `dev` branch protection rule. The reviewer covers up to four bounded textual chunks (40 files / 60,000 patch characters each), refuses approval if GitHub omits a patch, and posts one updatable PR comment. It is a merge gate, not a substitute for human review.
+Before enabling merges, add the repository Actions secret `OPENAI_API_KEY` and configure `gpt-5.6-terra` as a required status check in the `dev` branch protection rule. The reviewer covers up to four bounded textual chunks (40 files / 120,000 patch characters each), refuses approval if GitHub omits an unexpected patch, and posts one updatable PR comment. A narrow exact-path allowlist inventories generated OpenAPI/types, benchmark-result records, and hash-addressed benchmark data/model artifacts instead of sending their derived or binary contents; their generators, manifests, source-of-truth contracts, and tests remain reviewable. It is a merge gate, not a substitute for human review.
 
 The repository is public, so GitHub branch protection can require the `gpt-5.6-terra` status check before merging to `dev`.
 

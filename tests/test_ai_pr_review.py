@@ -77,6 +77,38 @@ def test_collect_diff_splits_a_complete_large_pr_into_safe_chunks(monkeypatch) -
     assert f"src/file_{reviewer.MAX_FILES_PER_CHUNK}.py" in chunks[1]
 
 
+def test_collect_diff_inventories_allowlisted_derived_artifact_without_truncating(
+    monkeypatch,
+) -> None:
+    files = [
+        {
+            "filename": "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops",
+            "patch": None,
+            "status": "added",
+            "additions": 0,
+            "deletions": 0,
+        },
+        {"filename": "src/reviewable.py", "patch": "+safe = True"},
+    ]
+    monkeypatch.setattr(reviewer, "github_api", lambda *args, **kwargs: files)
+
+    chunks, truncated = reviewer.collect_diff("owner/repo", 1, "token")
+
+    assert truncated is False
+    assert "Content omitted by the trusted review policy" in chunks[0]
+    assert "src/reviewable.py" in chunks[0]
+
+
+def test_collect_diff_fails_closed_for_unexpected_binary(monkeypatch) -> None:
+    files = [{"filename": "src/unexpected.bin", "patch": None}]
+    monkeypatch.setattr(reviewer, "github_api", lambda *args, **kwargs: files)
+
+    chunks, truncated = reviewer.collect_diff("owner/repo", 1, "token")
+
+    assert chunks == []
+    assert truncated is True
+
+
 def test_combine_reviews_preserves_a_block_from_any_chunk() -> None:
     approval = {"verdict": "approve", "summary": "Chunk one is clear.", "findings": []}
     block = {
