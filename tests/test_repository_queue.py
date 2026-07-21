@@ -13,6 +13,7 @@ from polygraphml.domain.models import (
     AuditMode,
     AuditStatus,
     JobMessage,
+    MetricComparison,
     Project,
     ProjectSource,
     ProjectStatus,
@@ -53,6 +54,34 @@ def test_child_objects_do_not_overwrite_each_other(tmp_path: Path) -> None:
         "art_2",
     ]
     repository.close()
+
+
+def test_legacy_metric_comparison_receives_explicit_migration_provenance() -> None:
+    comparison = MetricComparison.model_validate(
+        {
+            "metric": "roc_auc",
+            "reported": {
+                "value": 0.9,
+                "provenance": "notebook:cell-1",
+                "protocol_id": None,
+                "tolerance": None,
+            },
+            "reproduced": {
+                "value": 0.89,
+                "provenance": "evidence:old",
+                "protocol_id": "reproduction-v1",
+                "tolerance": 0.005,
+            },
+            "reproduction_status": "outside_tolerance",
+        }
+    )
+
+    assert comparison.reported is not None
+    assert comparison.reported.protocol_id == "legacy_reported_claim"
+    assert comparison.reported.reproduction_tier == "reported_claim"
+    assert comparison.reproduced is not None
+    assert comparison.reproduced.protocol_id == "reproduction-v1"
+    assert comparison.reproduced.reproduction_tier == "static_only"
 
 
 def test_queue_deduplicates_and_dead_letters_after_three_attempts(tmp_path: Path) -> None:

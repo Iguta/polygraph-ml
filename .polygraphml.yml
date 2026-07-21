@@ -1,0 +1,40 @@
+schema_version: '1'
+artifacts:
+  dataset: src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.csv
+  model: src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops
+  notebook: src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.ipynb
+  source: src/polygraphml/benchmarks/data/uci_bank/derivation.txt
+mapping:
+  target_column: subscribed
+  split_column: split
+  entity_column: row_id
+  reported_metric_location: bank_marketing_evaluation.ipynb#cell=3
+scenario:
+  revision: 1
+  target_definition: Whether the client subscribes to a term deposit
+  row_entity: One client contact in a direct-marketing campaign
+  decision_time: Before the current marketing call begins
+  prediction_horizon: Response to the current marketing contact
+  split_unit: row_id
+  intended_metric: roc_auc
+  positive_label: '1'
+  notes: UCI Bank Marketing, DOI 10.24432/C5K306. The derived table preserves all
+    45,211 records and uses deterministic category codes documented in derivation.txt.
+features:
+  duration:
+    description: Duration in seconds of the current campaign's last contact
+    source_refs:
+    - https://archive.ics.uci.edu/dataset/222/bank%2Bmarketing#Additional-Variable-Information
+  poutcome:
+    description: Outcome of the previous marketing campaign
+    source_refs:
+    - https://archive.ics.uci.edu/dataset/222/bank%2Bmarketing#Additional-Variable-Information
+provenance:
+  dataset_source_url: https://doi.org/10.24432/C5K306
+  license_name: CC BY 4.0
+  license_url: https://creativecommons.org/licenses/by/4.0/
+  artifact_hashes:
+    src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.csv: 060671f9dcf10dbf76cda0dec39e8ab1b9c0787c4b93e31f1ca7fab95c508b39
+    src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops: 5c23908310184d18ce20f5a40cd2f16e19455ff7c9029d5fa86268b0e3ac8d90
+    src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.ipynb: 365fac335a5e0b430ab42e591da7660713f1979b680bdc5451132c116d782af1
+    src/polygraphml/benchmarks/data/uci_bank/derivation.txt: 61563a20dec3f395d2c57c9c673bdb744b71fc5f453c4d121a4f69b181c09d34

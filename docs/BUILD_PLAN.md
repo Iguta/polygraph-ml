@@ -4,6 +4,18 @@
 
 This is the deadline-oriented critical path. It does not replace the phase gates. The demo path must be real, reproducible, and polished before secondary adapters or audit families are added.
 
+## v0.2 final critical path — current
+
+1. Freeze and commit the root manifest, flagship artifacts, expectations, and prohibited claims.
+2. Run the public-GitHub import at that exact 40-character SHA.
+3. Run the exactly three authorized live evaluations once; preserve failures without expanding or retuning the sweep.
+4. Pass clean-checkout CI plus GPT-5.6 Terra review into `dev`, then release review into `main`.
+5. Tag `v0.2.0`; deploy API/worker image digests and Vercel from the same SHA; verify `/version`, TLS, CORS, SQS resume/DLQ, repair download, deletion, and secret history.
+6. Rotate the OpenAI key, update Secrets Manager and local ignored configuration without exposing it, redeploy the worker, and repeat the relevant smoke checks.
+7. Record the 90-second live proof and clearly labeled fixture fallback; verify metadata and submission URLs.
+
+Do not implement the conditional Codex CLI/skill until all seven steps—including both recordings—are complete.
+
 ## Day 1 — One trustworthy vertical slice
 
 Build the smallest complete evidence bundle first: one CSV/Parquet dataset, one safe model artifact, one notebook, and one declared scenario. Use a curated benchmark repository so input, expected issue, and corrected result are pinned before implementation.

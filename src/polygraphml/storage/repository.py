@@ -24,6 +24,7 @@ from polygraphml.domain.models import (
     JobMessage,
     Project,
     Question,
+    RepairBundle,
     Session,
     utc_now,
 )
@@ -44,6 +45,7 @@ class SqliteRepository:
         Finding: "finding",
         Correction: "correction",
         AuditReport: "report",
+        RepairBundle: "repair_bundle",
     }
     _id_fields: ClassVar[dict[type[BaseModel], str]] = {
         Project: "project_id",
@@ -55,6 +57,7 @@ class SqliteRepository:
         Finding: "finding_id",
         Correction: "correction_id",
         AuditReport: "report_id",
+        RepairBundle: "bundle_id",
     }
 
     def __init__(self, path: Path) -> None:
@@ -151,6 +154,8 @@ class SqliteRepository:
         return session
 
     def _parent_id(self, model: BaseModel) -> str | None:
+        if isinstance(model, RepairBundle):
+            return model.audit_id
         for name in ("project_id", "audit_id", "session_id"):
             if hasattr(model, name):
                 value = getattr(model, name)

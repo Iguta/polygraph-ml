@@ -1,5 +1,7 @@
 environment    = "hackathon"
 aws_region     = "us-east-1"
+release_version = "0.2.0"
+build_sha       = "0000000000000000000000000000000000000000"
 cors_origins   = "https://polygraphml.example.vercel.app"
 certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/replace-me"
 api_hostname    = "api.polygraphml.example.com"

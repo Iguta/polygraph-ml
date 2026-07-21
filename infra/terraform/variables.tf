@@ -10,6 +10,21 @@ variable "environment" {
   default     = "hackathon"
 }
 
+variable "release_version" {
+  description = "Application release version exposed by the API."
+  type        = string
+  default     = "0.2.0"
+}
+
+variable "build_sha" {
+  description = "Full lowercase Git commit SHA shared by API, worker, and frontend deployment."
+  type        = string
+  validation {
+    condition     = can(regex("^[0-9a-f]{40}$", var.build_sha))
+    error_message = "build_sha must be a full lowercase 40-character Git commit SHA."
+  }
+}
+
 variable "api_image" {
   description = "Immutable ECR API image URI including sha256 digest."
   type        = string

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "polygraphml"
-version = "0.1.0"
+version = "0.2.0"
 description = "Evidence-backed QA for machine learning systems"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
@@ -34,7 +34,9 @@ dependencies = [
 polygraphml-api = "polygraphml.api.main:run"
 polygraphml-worker = "polygraphml.worker.main:run"
 polygraphml-benchmarks = "polygraphml.benchmarks.evaluate:main"
+polygraphml-live-evaluation = "polygraphml.benchmarks.live_evaluate:main"
 polygraphml-queue-calibration = "polygraphml.operations.queue_timing:main"
+polygraphml-public-github-gate = "polygraphml.operations.public_github_gate:main"
 polygraphml-live-smoke = "polygraphml.operations.live_trace:main"
 polygraphml-deployed-smoke = "polygraphml.operations.deployed_smoke:main"
 
@@ -58,6 +60,7 @@ show_missing = true
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+extend-exclude = ["src/polygraphml/benchmarks/data"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "RUF", "ASYNC", "S"]

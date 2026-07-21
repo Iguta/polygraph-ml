@@ -1,6 +1,6 @@
 # Solution Architecture — PolygraphML
 
-**Version:** 1.1 · **Owner:** David · **Date:** July 18, 2026
+**Version:** 1.2 · **Owner:** David · **Date:** July 21, 2026
 
 ## 1. Architecture at a glance
 
@@ -32,7 +32,7 @@
 │  │ one GPT-5.6 audit agent · idempotent state machine          │  │
 │  └──────────────┬───────────────────────────────┬──────────────┘  │
 │                 │                               │                 │
-│                 │ safe compute                                    │
+│                 │ bounded compute                                 │
 │                 ▼                                                 │
 │  ┌────────────────────────────────────────────────────────────┐  │
 │  │ pandas · PyArrow · scikit-learn · skops probes/corrections │  │
@@ -70,11 +70,11 @@ Exact Python and npm versions are pinned in `uv.lock` and `frontend/package-lock
 
 ### React frontend
 
-Creates projects, obtains presigned uploads, maps artifacts, captures the scenario contract, starts audits, resumes the Decision Trace, answers questions, and renders/export results. It never receives an OpenAI key and never calls OpenAI directly.
+Creates projects, obtains presigned uploads, maps artifacts, captures the scenario contract, starts audits, resumes the Decision Trace, answers questions, renders reports, and downloads deterministic repair bundles. It never receives an OpenAI key and never calls OpenAI directly.
 
 ### FastAPI service
 
-Validates metadata, issues scoped presigned URLs, persists project/audit state, enqueues jobs, exposes replayable events over SSE with polling fallback, accepts follow-up answers, and serves result manifests. The API does not execute notebooks or load submitted model objects.
+Validates metadata, imports strict manifests at immutable GitHub SHAs, issues scoped presigned URLs, persists project/audit state, enqueues jobs, exposes replayable events over SSE with polling fallback, accepts follow-up answers, and serves reports/short-lived repair downloads. The API does not execute notebooks or load submitted model objects.
 
 ### SQS
 
@@ -84,7 +84,7 @@ The queue decouples user requests from audit duration. Messages contain only ide
 
 Consumes one audit job, obtains artifact metadata, runs the single audit agent, invokes typed deterministic tools, emits ordered events, and checkpoints the state machine. Duplicate delivery is expected and neutralized using conditional DynamoDB state transitions and idempotent result keys.
 
-The coordinator may access the OpenAI key but does not execute arbitrary submitted Python. Safe model adapters deserialize only formats approved by policy.
+The coordinator may access the OpenAI key but does not execute arbitrary submitted Python. Approved `.skops` operations run in a bounded child process with a sanitized environment and resource limits. This child is not a hostile-code sandbox; safe model type inspection remains mandatory.
 
 ### Isolated executor (P1, not deployed)
 
@@ -103,8 +103,8 @@ The agent receives profiles, source excerpts, scenario facts, and deterministic 
 3. Browser submits the scenario contract and starts an audit with an idempotency key.
 4. API persists `queued`, sends an SQS message, and returns `202 Accepted`.
 5. Worker claims the audit, reconstructs evidence, asks questions or runs probes, and appends ordered Decision Trace events.
-6. The API supports SSE replay after the last event ID plus JSON polling; the current React client uses durable JSON polling and restores the active audit after refresh.
-7. Corrections, findings, and Markdown reports are durable domain records in DynamoDB; submitted artifact bytes remain in S3.
+6. The React client uses authenticated fetch-based SSE, supplies `Last-Event-ID`, reconnects with bounded backoff, falls back to JSON polling, and restores the active audit after refresh.
+7. Corrections, findings, executive/technical Markdown reports, and repair metadata are durable domain records in DynamoDB; artifact and repair bytes remain in S3.
 8. Retention rules remove user artifacts after the configured period while preserving only permitted metadata.
 
 ## 6. Trust boundaries and invariants
@@ -126,6 +126,7 @@ The agent receives profiles, source excerpts, scenario facts, and deterministic 
 - S3, DynamoDB, SQS/DLQ, Secrets Manager, CloudWatch, and least-privilege IAM roles are provisioned as infrastructure as code.
 - CORS allows only the configured Vercel domains and localhost development origins.
 - The initial worker count is one for cost and predictability; queue-depth scaling is a roadmap optimization.
+- Terraform requires a full Git commit SHA and release version; the same SHA is injected into API/worker `/version` provenance and the Vercel `VITE_BUILD_SHA` build.
 
 ## 8. Local development
 

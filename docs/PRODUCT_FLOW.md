@@ -1,6 +1,6 @@
 # Product Flow — PolygraphML
 
-**Version:** 1.1 · **Experience:** one responsive React workspace with seven progressive states
+**Version:** 1.2 · **Experience:** one responsive React workspace with seven progressive states
 
 The product transforms in place so the user retains context. A compact stepper and persistent project header provide orientation without turning the experience into a long configuration wizard.
 
@@ -10,7 +10,7 @@ The landing view leads with the promise: **“Find out whether your model earned
 
 1. **Audit a GitHub repository** — enter a public repository URL and optional branch/tag/commit.
 2. **Upload model evidence** — upload dataset, model artifact, and optional notebook/manifest.
-3. **Try a benchmark** — open a curated, fully reproducible example.
+3. **Run the flagship audit** — open the full UCI Bank Marketing proof; the UCI COVID clean control remains a secondary action.
 
 Each choice explains what a complete audit requires. Dataset-only uploads are labeled **Dataset preflight**, not presented as full model audits. The primary demo reaches source selection within ten seconds.
 
@@ -49,7 +49,7 @@ This state never uses an unexplained spinner. Every step is either pending, runn
 
 The main workspace splits into:
 
-- a feature/source rail showing current statuses;
+- an execution rail showing durable stages, source, exact evaluator model/mode/harness, build SHA, and seed;
 - a timeline of structured audit events;
 - a contextual evidence drawer.
 
@@ -61,7 +61,7 @@ The product does not label this view “chain-of-thought.” It shows a sanitize
 
 When a missing scenario fact could change the conclusion, the trace pauses with one focused question. For example:
 
-> “Is `call_duration` available when the campaign decides whom to call, or only after the call finishes?”
+> “Is `duration` available at the declared decision moment, or only afterward?”
 
 The user answer is recorded as an event, affected hypotheses are reevaluated, and the same SQS-backed audit resumes. The rest of the page remains inspectable while paused.
 
@@ -84,7 +84,7 @@ The final workspace includes:
 - assumptions and unresolved questions;
 - cleared checks and unsupported checks;
 - reproducibility metadata;
-- **Download JSON**, **Generate stakeholder report**, and **Run another audit** actions.
+- **Generate executive brief**, **Generate technical report**, **Build/download deterministic repair**, and **Run another audit** actions.
 
 Every finding expands into a trace from hypothesis to evidence to correction, including “What would change this conclusion?” A fully clean result is a first-class success state: **“No tested leakage mechanism was confirmed under the stated scenario.”** It never overclaims universal safety.
 
@@ -96,6 +96,7 @@ Every finding expands into a trace from hypothesis to evidence to correction, in
 - A probe timeout produces an `inconclusive` result rather than a false clearance or confirmation.
 - An SQS retry does not duplicate events or corrections; the UI may display the retry count.
 - A disconnected SSE stream falls back to polling and resumes from the last event ID.
+- Build/mode badges derive from `/version` and stored audit provenance: `LIVE · gpt-5.6-sol` is shown only after a recorded OpenAI live execution; fixture and degraded runs remain explicit.
 - A missing API key disables live semantic analysis with a clear configuration notice; benchmark fixtures and deterministic UI flows remain usable in development.
 
 ## Demo mapping

@@ -24,6 +24,7 @@ from polygraphml.domain.models import (
     Hypothesis,
     Project,
     Question,
+    RepairBundle,
     Session,
     utc_now,
 )
@@ -44,6 +45,7 @@ class DynamoRepository:
         Finding: "finding",
         Correction: "correction",
         AuditReport: "report",
+        RepairBundle: "repair_bundle",
     }
     _id_fields: ClassVar[dict[type[BaseModel], str]] = {
         Project: "project_id",
@@ -55,6 +57,7 @@ class DynamoRepository:
         Finding: "finding_id",
         Correction: "correction_id",
         AuditReport: "report_id",
+        RepairBundle: "bundle_id",
     }
 
     def __init__(self, table_name: str, region: str, *, resource: Any | None = None) -> None:
@@ -101,6 +104,8 @@ class DynamoRepository:
 
     @staticmethod
     def _parent_id(model: BaseModel) -> str | None:
+        if isinstance(model, RepairBundle):
+            return model.audit_id
         for name in ("project_id", "audit_id", "session_id"):
             value = getattr(model, name, None)
             if isinstance(value, str):

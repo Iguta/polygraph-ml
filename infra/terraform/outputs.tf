@@ -4,6 +4,8 @@ output "state_table" { value = aws_dynamodb_table.state.name }
 output "audit_queue_url" { value = aws_sqs_queue.audit.url }
 output "audit_dlq_url" { value = aws_sqs_queue.dlq.url }
 output "queue_visibility_seconds" { value = var.queue_visibility_seconds }
+output "release_version" { value = var.release_version }
+output "build_sha" { value = var.build_sha }
 output "openai_secret_arn" {
   value     = aws_secretsmanager_secret.openai.arn
   sensitive = true

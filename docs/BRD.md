@@ -1,6 +1,6 @@
 # Business Requirements Document — PolygraphML
 
-**Version:** 1.1 · **Owner:** David · **Date:** July 18, 2026 · **Status:** Approved foundation
+**Version:** 1.2 · **Owner:** David · **Date:** July 21, 2026 · **Status:** v0.2 release candidate
 
 ## 1. Executive summary
 
@@ -58,7 +58,9 @@ The hackathon release succeeds when:
 - an audit survives browser refresh because it is queued through SQS and persisted server-side;
 - the system displays reported, reproduced, and corrected metrics without allowing the LLM to invent any number;
 - every confirmed finding links to deterministic evidence and a rerunnable correction;
+- a supported literal-feature notebook produces a hash-addressed repair bundle, while ambiguous code returns an explicit unavailable result;
 - a clean-control benchmark produces zero false confirmed findings;
+- fixture quality is reported with raw case counts and uncertainty, and the bounded live gate is limited to three predeclared model calls;
 - at least one planted-leak benchmark and one curated public benchmark complete end to end;
 - the React experience is polished, intuitive, responsive, and demo-ready;
 - the deployed demo path completes within the agreed performance budget and has a deterministic recorded fallback;

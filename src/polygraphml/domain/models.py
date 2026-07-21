@@ -100,6 +100,16 @@ class FindingMechanism(StrEnum):
     OTHER = "other"
 
 
+class ProbeKind(StrEnum):
+    FEATURE_AVAILABILITY = "feature_availability"
+    TARGET_PROXY_ASSOCIATION = "target_proxy_association"
+    METRIC_CONTRACT = "metric_contract"
+    GROUP_OVERLAP = "group_overlap"
+    EXACT_DUPLICATE_OVERLAP = "exact_duplicate_overlap"
+    PREPROCESSING_ORDER = "preprocessing_order"
+    CORRECTED_EVALUATION = "corrected_evaluation"
+
+
 class Severity(StrEnum):
     CRITICAL = "critical"
     HIGH = "high"
@@ -212,6 +222,11 @@ class Scenario(StrictModel):
     created_at: datetime = Field(default_factory=utc_now)
 
 
+class FeatureContext(StrictModel):
+    description: str = Field(min_length=3, max_length=500)
+    source_refs: list[str] = Field(default_factory=list, max_length=5)
+
+
 class Project(StrictModel):
     project_id: str
     session_id: str
@@ -221,6 +236,7 @@ class Project(StrictModel):
     artifact_ids: list[str] = Field(default_factory=list)
     mapping: ArtifactMapping = Field(default_factory=ArtifactMapping)
     scenarios: list[Scenario] = Field(default_factory=list)
+    feature_context: dict[str, FeatureContext] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
@@ -253,7 +269,7 @@ class Hypothesis(StrictModel):
     features: list[str]
     assumptions: list[str]
     rationale_summary: str
-    requested_probe: str
+    requested_probe: ProbeKind
     falsification_condition: str
     source_refs: list[str] = Field(default_factory=list)
 
@@ -310,6 +326,29 @@ class MetricComparison(StrictModel):
         "within_tolerance", "outside_tolerance", "unavailable", "not_claimed"
     ]
 
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_metric_provenance(cls, value: Any) -> Any:
+        """Read v1 persisted metrics without weakening the v2 write contract."""
+        if not isinstance(value, dict):
+            return value
+        migrated = dict(value)
+        for field_name in ("reported", "reproduced", "corrected"):
+            raw_metric = migrated.get(field_name)
+            if not isinstance(raw_metric, dict):
+                continue
+            metric = dict(raw_metric)
+            if not metric.get("protocol_id"):
+                metric["protocol_id"] = (
+                    "legacy_reported_claim" if field_name == "reported" else "legacy_unversioned"
+                )
+            if not metric.get("reproduction_tier"):
+                metric["reproduction_tier"] = (
+                    "reported_claim" if field_name == "reported" else "static_only"
+                )
+            migrated[field_name] = metric
+        return migrated
+
 
 class Question(StrictModel):
     question_id: str
@@ -333,16 +372,49 @@ class Verdict(StrictModel):
     unsupported_checks: list[str] = Field(default_factory=list)
 
 
+class AgentExecutionProvenance(StrictModel):
+    provider: Literal["openai", "fixture"]
+    mode: Literal["live", "fixture", "degraded"]
+    requested_model: str
+    resolved_model: str | None = None
+    reasoning_effort: Literal["low", "medium", "high", "xhigh", "max"] = "high"
+    harness_version: str = "audit-v2"
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    total_tokens: int = Field(default=0, ge=0)
+    latency_ms: int = Field(default=0, ge=0)
+    trace_id: str | None = None
+    response_id: str | None = None
+    request_id: str | None = None
+    failure_code: str | None = None
+
+
+class ComputeExecutionProvenance(StrictModel):
+    mode: Literal["bounded_subprocess"] = "bounded_subprocess"
+    harness_version: str = "compute-v1"
+    sandboxed: Literal[False] = False
+    wall_timeout_seconds: float = Field(gt=0)
+    cpu_limit_seconds: int = Field(gt=0)
+    memory_limit_bytes: int = Field(gt=0)
+    file_descriptor_limit: int = Field(gt=0)
+    train_rows: int = Field(ge=0)
+    test_rows: int = Field(ge=0)
+    test_positive: int = Field(ge=0)
+    test_negative: int = Field(ge=0)
+
+
 class Provenance(StrictModel):
     source_commit: str | None = None
     artifact_hashes: list[str] = Field(default_factory=list)
-    evaluator_version: str = "0.1.0"
+    evaluator_version: str = "0.2.0"
     agent_model: str = "gpt-5.6-sol"
-    prompt_schema_version: str = "audit-v1"
+    prompt_schema_version: str = "audit-v2"
     random_seed: int = 42
     package_versions: dict[str, str] = Field(default_factory=dict)
     split_hash: str | None = None
     feature_order: list[str] = Field(default_factory=list)
+    agent_execution: AgentExecutionProvenance | None = None
+    compute_execution: ComputeExecutionProvenance | None = None
 
 
 class Audit(StrictModel):
@@ -417,4 +489,17 @@ class AuditReport(StrictModel):
     audience: Literal["technical", "executive"]
     format: Literal["markdown"] = "markdown"
     content: str
+    created_at: datetime = Field(default_factory=utc_now)
+
+
+class RepairBundle(StrictModel):
+    bundle_id: str
+    audit_id: str
+    project_id: str
+    status: Literal["available", "unavailable"]
+    sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    size_bytes: int | None = Field(default=None, ge=0)
+    storage_key: str | None = None
+    file_hashes: dict[str, str] = Field(default_factory=dict)
+    limitations: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=utc_now)
