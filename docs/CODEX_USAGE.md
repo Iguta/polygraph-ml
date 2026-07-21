@@ -11,11 +11,12 @@ This is an evidence log for the OpenAI Build Week submission. It must describe c
 - Starting documentation commit: `a4291caadc53fe27c7fefbda501f29076d52b227` (`docs: PolygraphML starter documentation suite`).
 - Implementation commit: `0d8f00caefb6150ff3d86d30396c478a030612d9` (`feat: ship PolygraphML audit platform`).
 - Release-branch CI hardening: `2e3ee05`, `fa11d28`, `f738301`, and `e924c84`.
-- Review PR: [#1 — `agent/polygraphml-release` into `dev`](https://github.com/Iguta/polygraph-ml/pull/1) (draft while deterministic CI is complete).
+- Review PRs: [#1 — prior `agent/polygraphml-release` release](https://github.com/Iguta/polygraph-ml/pull/1), merged at `22660b7`; [#2 — trusted large-patch Terra policy](https://github.com/Iguta/polygraph-ml/pull/2), merged at `7424a1f`; and [#3 — v0.2 hackathon-winning slice](https://github.com/Iguta/polygraph-ml/pull/3), open from `agent/hackathon-winning-slice` to `dev`.
+- v0.2 expectation-bearing implementation commit: `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5` (`feat: ship hackathon-winning evidence slice`), created before any v0.2 live evaluation.
 
 ## Current repository state
 
-As of July 20, 2026, the repository contains a functional local fixture-mode vertical slice, deterministic audit engine, polished React workflow, AWS infrastructure definitions, container images, and benchmark release gate. AWS and Vercel authentication pass. The delegated `polygraphml.davidiguta.com` zone resolves, the ACM certificate is issued, the pinned AWS stack is applied, and the API/worker services are healthy on ECS Fargate. The React production site responds at `https://polygraphml.davidiguta.com`. A sanitized live GPT-5.6 trace was rerun after the committed benchmark expectations. The implementation is committed and under review in PR #1; demo-video and submission-metadata work remain David-owned.
+As of July 21, 2026, the earlier vertical slice is deployed at `polygraphml.davidiguta.com`, but the committed `v0.2.0` candidate is a materially larger change and must not be confused with that deployment. The candidate adds a typed multi-mechanism agent contract, strict root manifest, full UCI Bank Marketing flagship, bounded child compute, semantic proxy/hard negative, benchmark schema v2, real executive/technical reports, deterministic repair bundles, generated frontend contracts, authenticated SSE/replay/fallback, and exact build provenance. The 94-test backend suite, static checks, frontend unit/build gates, seven-case fixture gate, immutable public-GitHub audit, Terraform validation, two candidate container builds, and six-test Playwright suite pass locally. The explicitly approved repaired three-case live gate now passes 3/3 with two independently selected mechanisms and no degradation, while the first failed record remains preserved. PR #2 merged the fail-closed large-patch Terra reviewer into `dev`; all five PR #3 checks, including GPT-5.6 Terra, passed at `13a88e5` before the live evidence commit. The merge/deployment, credential rotation, and both recordings remain open.
 
 ## Completed Codex work
 
@@ -48,11 +49,23 @@ Codex implemented public GitHub commit pinning, direct/local uploads, artifact o
 
 **Evidence:** `tests/test_artifact_safety.py`, `tests/test_adapters.py`, `tests/test_api_contract.py`, `tests/test_probes_policy.py`, and `tests/test_aws_adapters.py`.
 
-### Agent and human loop — July 18, 2026
+### Agent and human loop — July 18–21, 2026
 
-Codex pinned the OpenAI and Agents SDKs, configured explicit `gpt-5.6-sol` Responses API execution, typed read-only agent tools, structured investigation output, bounded timeouts/fallback, and separate rationale summaries. Fixture mode proves the persisted question/resume and policy path without claiming a model call. Live mode remains unverified until a key is configured and a sanitized trace is captured.
+Codex pinned the OpenAI and Agents SDKs, configured explicit `gpt-5.6-sol` Responses API execution with high reasoning effort, typed read-only agent tools, one-to-three structured hypotheses, a mechanism/probe compatibility registry, one material question, bounded five-turn execution/fallback, and separate rationale summaries. The coordinator dispatches post-outcome, target-proxy, and metric-contract probes while deterministic split/group/preprocessing probes run automatically. Fixture mode proves persistence/policy without claiming a model call. The earlier live trace proves only the prior post-outcome path; the v0.2 three-case live gate remains open.
 
-**Evidence:** `src/polygraphml/agent/runtime.py`, `src/polygraphml/worker/coordinator.py`, and `tests/test_audit_lifecycle.py`.
+**Evidence:** `src/polygraphml/agent/runtime.py`, `src/polygraphml/worker/coordinator.py`, `src/polygraphml/benchmarks/live_evaluate.py`, `tests/test_deterministic_evidence.py`, and `tests/test_live_evaluation.py`.
+
+### Winning v0.2 evidence slice — July 21, 2026
+
+Codex implemented the strict `.polygraphml.yml` schema and manifest-first public GitHub importer; safe `.skops` evaluation/correction in a child process capped at 120 wall seconds, 90 CPU seconds, 2 GiB address space, 64 descriptors, bounded output, single-thread libraries, sanitized environment, and process-group termination; the full licensed 45,211-row UCI Bank Marketing benchmark; a semantic target proxy; a suspicious hard negative; and a seven-case evaluator with raw counts, Wilson intervals, quality/degradation/token/latency fields, and the deterministic/semantic/full ablation comparison.
+
+**Evidence:** `.polygraphml.yml`, `scripts/generate_uci_bank_benchmark.py`, `src/polygraphml/adapters/manifests.py`, `src/polygraphml/engine/bounded_compute.py`, `src/polygraphml/benchmarks/`, `benchmark-results/latest.json`, `tests/test_manifests.py`, `tests/test_github_intake.py`, `tests/test_bounded_compute.py`, and `tests/test_benchmark_evaluation.py`.
+
+### Self-proving product experience — July 21, 2026
+
+Codex replaced interval-only fetching with authenticated fetch-based SSE, `Last-Event-ID`, reconnect backoff, JSON polling fallback, and session refresh replay; made mode/model/build labels derive from stored provenance; regenerated OpenAPI frontend types; separated executive and technical reports; and added idempotent hash-addressed repair archives for unambiguous literal feature lists. Playwright forces stream failure, refreshes the flagship audit, verifies the measured `0.871 → 0.733` comparison, generates both reports, downloads the repair, proves four clean-control clearances with zero confirmations, runs axe, and checks three viewport classes.
+
+**Evidence:** `frontend/src/`, `frontend/e2e/fixture-audit.spec.ts`, `src/polygraphml/services/reporting.py`, `src/polygraphml/services/repairs.py`, `tests/test_repairs.py`, `packages/contracts/openapi.json`, and the passing July 21 Playwright run.
 
 ### AWS and Vercel definitions — July 18, 2026
 
@@ -66,40 +79,47 @@ Codex verified the `PolygraphMLDeployer` AWS identity and Vercel CLI authenticat
 
 **Evidence:** AWS Route 53/ACM/ECR/Secrets Manager state, `infra/terraform/hackathon.tfvars` (ignored), and the successful targeted Terraform apply.
 
-### Benchmarks and product verification — July 18, 2026
+### Benchmarks and product verification — July 18–21, 2026
 
-The fixture release gate runs isolated post-outcome and group-contamination cases, a planted multi-mechanism campaign case, and a licensed public UCI COVID-19 surveillance clean control. Captured output reports four true positives, precision/recall `1.0`, zero false confirmations/negatives, zero reproduction and corrected-metric error, and corrected campaign AUC `0.8627956989247312`. Fixture token use and cost are explicitly zero.
+The fixture release gate now runs seven cases: the UCI Bank flagship, multi- and single-mechanism planted cases, semantic proxy, suspicious hard negative, and two clean controls. Captured schema-v2 output reports six exact expected feature/mechanism pairs, zero false confirmations/negatives, precision/recall `6/6` with Wilson interval `[0.609657, 1.0]`, exact pair match `7/7`, useful questions `6/7`, and zero degradation/schema failures. The flagship reproduces ROC AUC `0.8713005400607956` and corrects to `0.7330845871361364`. Fixture tokens/cost remain explicitly zero.
 
 **Evidence:** `src/polygraphml/benchmarks/`, `benchmark-results/latest.json`, `docs/BENCHMARKS.md`, and `tests/test_benchmark_evaluation.py`.
 
 ### Operational evidence tooling — July 19, 2026
 
-Codex added a measured queue-timing calibrator, a fail-closed local live-smoke recorder, and a public-path deployed-smoke recorder. The calibrator distinguishes fixture evidence from a production-calibrated sample. The smoke recorders reject fixture degradation where required, remove dataset sample values before model calls, exercise durable worker processing, and write counts/identifiers only—never event payloads, prompts, reasoning text, raw values, session tokens, or credentials.
+Codex added a measured queue-timing calibrator, a fail-closed historical live-smoke recorder, a new exactly-three-case v0.2 live evaluator, and a public-path deployed-smoke recorder. The calibrator distinguishes fixture evidence from a production-calibrated sample. The recorders remove dataset sample values before model calls and write metadata only—never event payloads, prompts, reasoning text, raw values, session tokens, or credentials.
 
-**Evidence:** `src/polygraphml/operations/`, `benchmark-results/queue-timing.json`, `benchmark-results/deployed-smoke.json`, `tests/test_operations.py`, `make calibrate-queue`, `make live-smoke`, `make deployed-smoke`, and `make deployment-preflight`.
+**Evidence:** `src/polygraphml/operations/`, `src/polygraphml/benchmarks/live_evaluate.py`, `benchmark-results/queue-timing.json`, `benchmark-results/deployed-smoke.json`, `tests/test_operations.py`, `tests/test_live_evaluation.py`, `make calibrate-queue`, `REF=<sha> make public-github-gate`, `make eval-live`, `make deployed-smoke`, and `make deployment-preflight`.
+
+### Trusted PR review hardening — July 21, 2026
+
+Codex merged PR #2 into `dev` after GPT-5.6 Terra identified and verified repairs for large-patch review gaps. The trusted workflow now reviews every textual patch, fetches only the two predeclared omitted flagship artifacts by immutable Git blob SHA, bounds decoded size, scans fetched bytes for credentials, and requires each byte digest to agree with both the reviewed manifest and a base-policy digest anchor outside the product PR. PR #3's first review then exposed an SSE/OpenAPI mismatch, an unmapped-notebook repair hazard, a tautological clean-control question score, and a stale queue-timing claim. The candidate now contracts JSON plus SSE explicitly, selects and validates the mapped notebook, measures question usefulness against predeclared confirmed/cleared pairs, and regenerates the timing evidence and shared client contract.
+
+**Evidence:** PR #2 merge commit `7424a1f6fdc88732da496229eac50d6dd2f7ba68`, PR #3, `.github/workflows/ai-pr-review.yml`, `scripts/ai_pr_review.py`, `tests/test_ai_pr_review.py`, `tests/test_api_contract.py`, `tests/test_repairs.py`, and `tests/test_benchmark_evaluation.py`.
 
 ## Verification record
 
 | Gate | Result |
 |---|---|
-| Ruff format/lint and mypy | Passed |
-| Backend tests with coverage | 48 passed; 81.27% total coverage |
-| Frontend lint/type/unit/build | Passed; 5 unit/component tests |
-| Playwright fixture workflow | Passed with refresh, resume, report, axe checks, and three responsive sizes |
-| Terraform 1.14.3 init/validate | Passed with AWS provider 6.55.0 |
-| API and worker Docker builds | Passed as local `:test` images |
-| Gitleaks worktree and Git history | Passed with redaction; no leaks found |
-| GitHub Actions workflow lint | Passed with actionlint 1.7.7 |
-| AWS API health and ALB target | Passed; `https://api.polygraphml.davidiguta.com/healthz` returned HTTP 200 |
-| Vercel custom domain | Passed; `https://polygraphml.davidiguta.com` returned HTTP 200 |
-| Live OpenAI smoke | Passed; sanitized trace recorded with 23 events and model `gpt-5.6-sol` |
-| GitHub Actions PR CI | Passed in run `29714407361`: backend, frontend including Playwright E2E, Terraform validation, and history secret scanning |
+| v0.2 Ruff/mypy checks | Passed across 47 source files in the complete July 21 `make check` run |
+| Backend suite | 94 passed; 80.95% branch-aware coverage |
+| Frontend lint/type/unit/build | Passed; 6 unit/component tests |
+| v0.2 Playwright workflow | 6 passed: SSE failure/fallback, refresh/replay, provenance-gated live label, reports, repair download, clean clearance, axe, and three responsive sizes |
+| v0.2 fixture benchmark | 7 cases; 6/6 pairs; 0 false confirmations/negatives; two clean controls |
+| Terraform 1.14.3 init/validate | Passed with AWS provider 6.55.0 and current build/IAM changes |
+| Production npm audit | Passed with zero production vulnerabilities |
+| API/worker container build | v0.2 candidate images build; OCI version/revision labels and containerized API health/version were verified locally |
+| Gitleaks/workflow/CI | Full-history Gitleaks scan and PR #3 clean-checkout secrets workflow pass |
+| AWS API and Vercel domains | Historical deployment responds; exact v0.2 `/version`/frontend SHA verification remains open |
+| Live OpenAI evaluation | Approved repaired run passed exactly 3/3 live cases with zero degradation: two confirmed mechanisms plus one hard-negative clearance; 10,774 tokens and 65,408 ms agent latency. The first failed run remains separately preserved. |
+| GitHub Actions PR CI | PR #3 passes backend, frontend, infrastructure, secrets, and GPT-5.6 Terra at `13a88e5`; the live evidence commit must receive the same review before merge |
 
 ## Remaining submission work
 
-- Mark PR #1 ready for review to run the configured GPT-5.6 Terra reviewer, then merge after acceptance.
-- Retain the completed cold-start, refresh/replay, partial-failure, deletion, and DLQ metadata-only evidence for final review.
-- Record and verify the final demo video, fallback recording, and submission metadata.
+- After the passing live record receives PR #3 CI/Terra review, merge through `dev` and `main`, and tag `v0.2.0`.
+- Deploy frontend/backend from one SHA and pinned digests; repeat public smoke, repair download, replay/resume, deletion, and resilience gates.
+- Rotate the OpenAI key, update Secrets Manager/local ignored configuration, redeploy the worker, and repeat secret/history scanning.
+- Record and verify the live demo, labeled fixture fallback, and submission metadata.
 
 ## Debugging log
 
@@ -121,6 +141,14 @@ Add short, specific entries as real issues occur:
 | 2026-07-20 | PRs could reach `dev` with only deterministic CI checks | No semantic review gate existed for changes that passed lint and tests | Added a bounded, fail-closed `gpt-5.6-terra` review workflow that reads patches but never executes PR code with the OpenAI secret | Unit tests cover review policy and comment rendering; GitHub branch protection activation remains a repository setting |
 | 2026-07-20 | Required PR status checks could not be enabled on `dev` | GitHub rejected branch protection for the current private repository plan | Configured the repository Actions secret and documented the workflow/plan limitation without weakening workflow security | GitHub API returned HTTP 403; upgrade to Pro or make the repository public before enforcing the status check |
 | 2026-07-20 | Frontend CI could not launch its local API stack | The frontend job had no Python environment, then cold GitHub runners exceeded the original ten-second API readiness window | Installed the pinned backend environment in the frontend job, serialized E2E environment setup, captured service logs on failure, and allowed a bounded 30-second cold start | GitHub Actions run `29714407361` passed all four CI jobs, including Playwright E2E |
+| 2026-07-21 | E2E startup crashed on persisted audits after the metric provenance schema changed | Old `MetricValue` payloads lacked v2 protocol/tier fields, and the test stack reused one SQLite file | Added an explicit legacy read migration to `legacy_*`/`static_only`, a regression test, and isolated temp state per Playwright run | Repository tests and six Playwright cases pass |
+| 2026-07-21 | The frontend stayed in “Connecting” and raised a global error locally | `/version` was not included in the Vite proxy | Added the `/version` proxy and API contract coverage | Readiness/build badge appears and E2E passes |
+| 2026-07-21 | Mobile intake overflowed by 194 px | The build badge and 610 px stepper minimum expanded the document rather than an internal scroller | Hid build detail at mobile width, constrained the header, and made the stepper a bounded scroll container | Mobile overflow assertion passes at 390×844 |
+| 2026-07-21 | Repair download would fail in AWS despite successful bundle creation | The API task role lacked `s3:GetObject` needed by its presigned GET | Added the narrow permission plus S3 presign coverage and exact release/build Terraform inputs | Terraform validates and AWS adapter tests pass |
+| 2026-07-21 | First v0.2 live gate completed 0/3 despite correct flagship feature selection | Model-authored option values were not a stable evidence interface; proxy/post-outcome taxonomy was underspecified; the hard-negative failure code conflated provider and output failures | Added code-owned canonical choices, explicit mechanism precedence, and sanitized provider/output failure classes while preserving the failed evidence | Targeted planner/live tests pass; any repaired live rerun requires explicit cost approval |
+| 2026-07-21 | PR #3 could ship a silent empty Decision Trace and an unrelated notebook patch despite local behavior tests | The dual JSON/SSE route advertised only JSON in OpenAPI, and repair generation selected the first notebook instead of the explicit mapping | Contracted both response media types, regenerated the frontend contract, validated the mapped notebook/project, and made clean-control question scoring predeclared rather than tautological | The corrected Terra review passes on `609605e`; the expanded `make check` passes 94 backend and 6 frontend tests, and all 6 Playwright cases pass |
+| 2026-07-21 | A second `make eval-live` would overwrite the first failed record before its outcome was known | The CLI used one fixed output path and did not reject an existing evidence file | Preserved the failed record, moved the repaired-run target to `live-evaluation-rerun.json`, and added fail-closed overwrite protection before any model call | Unit coverage proves an existing path raises `LIVE_EVALUATION_EXISTS`; no OpenAI call was made |
+| 2026-07-21 | First v0.2 live gate failed 0/3 after finding the right flagship feature | Canonical answers and mechanism precedence were not enforced strongly enough at the model/application boundary | With explicit approval, ran the repaired three-case gate exactly once without individual retries | 3/3 passed live: flagship and semantic proxy confirmed under distinct mechanisms, hard negative cleared, zero degradation; sanitized record SHA-256 `aea0d4a8eae05d6876cf27e25e964ffaca7722a447ca801892ca86d6f85a413c` |
 
 ## Division of labor
 

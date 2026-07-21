@@ -57,11 +57,11 @@ export function Intake({
           <div className="source-icon">
             <Sparkles aria-hidden="true" />
           </div>
-          <p className="card-kicker">Best first run · 90 seconds</p>
-          <h2>Try the campaign benchmark</h2>
+          <p className="card-kicker">Flagship proof · full public dataset</p>
+          <h2>Audit UCI Bank Marketing</h2>
           <p>
-            A model, dataset, and notebook with a subtle post-decision feature.
-            Fully reproducible.
+            45,211 licensed records, a trained model, and an executed notebook.
+            Can a pre-call score legitimately use current-call duration?
           </p>
           <div className="benchmark-actions">
             <button
@@ -69,7 +69,7 @@ export function Intake({
               disabled={busy}
               onClick={onBenchmark}
             >
-              {busy ? "Preparing evidence…" : "Run the guided benchmark"}
+              {busy ? "Preparing evidence…" : "Run the flagship audit"}
               <ArrowRight aria-hidden="true" />
             </button>
             <button
@@ -81,7 +81,7 @@ export function Intake({
             </button>
           </div>
           <small>
-            CC0 synthetic fixture · expected failure declared in advance
+            UCI CC BY 4.0 · source and artifact hashes pinned in advance
           </small>
         </article>
 

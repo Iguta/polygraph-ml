@@ -51,3 +51,45 @@ describe("direct artifact uploads", () => {
     expect(headers.get("Authorization")).toBe("Bearer local-session-token");
   });
 });
+
+describe("Decision Trace streaming", () => {
+  it("authenticates SSE, resumes by event ID, and parses split frames", async () => {
+    sessionStorage.setItem("polygraphml.session", "stream-session-token");
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            'id: evt_2\nevent: evidence\ndata: {"event_id":"evt_2","audit_id":"aud_1","sequence":2,',
+          ),
+        );
+        controller.enqueue(
+          encoder.encode(
+            '"type":"evidence","actor":"tool","created_at":"2026-07-20T00:00:00Z","payload":{"observation":"computed"},"provenance_refs":[]}\n\n',
+          ),
+        );
+        controller.close();
+      },
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(body, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const received: string[] = [];
+
+    await api.streamEvents(
+      "aud_1",
+      1,
+      "evt_1",
+      (event) => received.push(event.event_id),
+      new AbortController().signal,
+    );
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const headers = new Headers(init.headers);
+    expect(url).toContain("after_sequence=1");
+    expect(headers.get("Authorization")).toBe("Bearer stream-session-token");
+    expect(headers.get("Last-Event-ID")).toBe("evt_1");
+    expect(received).toEqual(["evt_2"]);
+  });
+});

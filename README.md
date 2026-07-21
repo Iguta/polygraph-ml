@@ -19,7 +19,8 @@ PolygraphML is an adversarial QA engineer for tabular ML. It does not merely sca
 A complete audit needs the model and the evidence required to evaluate it:
 
 - A public GitHub repository, preferably containing the training notebook or pipeline code.
-- Or an upload bundle containing a dataset, model artifact, optional Jupyter notebook, and manifest.
+- Or an upload bundle containing a dataset, model artifact, Jupyter notebook, and optional manifest.
+- A root `.polygraphml.yml` manifest is preferred for repositories; it pins paths, hashes, mappings, scenario defaults, feature descriptions, source/license references, and never the expected verdict.
 - The prediction scenario: target, decision point, prediction horizon, entity/row meaning, and intended metric.
 
 The initial artifact adapters are deliberately safe and extensible:
@@ -36,7 +37,7 @@ Arbitrary JSON is not treated as a model format, and remotely supplied pickle, j
 
 1. **Reconstruct** — map the dataset, model, notebook, split logic, preprocessing, metric, and claimed result.
 2. **Clarify** — ask targeted follow-up questions when the prediction scenario or artifact mapping is ambiguous.
-3. **Reproduce** — run the submitted evaluation in an isolated, resource-limited environment.
+3. **Reproduce** — load only an approved `.skops` artifact and evaluate it in a resource-bounded child process. This is bounded compute, not a security sandbox; submitted notebook/source code remains static-only.
 4. **Interrogate** — GPT-5.6 Sol forms explicit, falsifiable hypotheses about feature availability, temporal ordering, split contamination, target proxies, and evaluation design.
 5. **Probe** — deterministic Python tools test those hypotheses.
 6. **Correct** — repair confirmed defects, retrain or reevaluate, and quantify the impact.
@@ -72,9 +73,9 @@ This trace is the product's transparency contract. OpenAI reasoning summaries ma
 
 PolygraphML is validated against both manufactured ground truth and public cases:
 
-- synthetic datasets with planted leakage and clean controls;
-- public datasets paired with reproducible notebooks/models and scenario-specific expected findings;
-- a curated public COVID-19 case study after its model, dataset license, provenance, and reproducibility are verified;
+- synthetic datasets with planted leakage, a semantic target proxy, a suspicious hard negative, and clean controls;
+- a full 45,211-row UCI Bank Marketing model/data/notebook bundle as the flagship public case;
+- a licensed 14-row UCI COVID-19 Surveillance bundle only as a non-clinical adapter/provenance clean control;
 - an expanding benchmark registry rather than a fixed list of supported domains.
 
 Benchmark expectations are declared before the audit is run. A clean control producing a false confirmed finding is release-blocking.
@@ -96,6 +97,7 @@ Benchmark expectations are declared before the audit is run. A clean control pro
 | [Deployment](docs/DEPLOYMENT.md) | AWS/Vercel deployment and production verification runbook |
 | [Demo Script](docs/DEMO_SCRIPT.md) | Target hackathon demo narrative |
 | [Build Plan](docs/BUILD_PLAN.md) | Critical path and cut lines |
+| [Winning implementation plan](docs/HACKATHON_WINNING_IMPLEMENTATION_PLAN.md) | Concrete v0.2.0 differentiation and release gates |
 | [Codex Usage](docs/CODEX_USAGE.md) | Honest implementation-session log |
 
 ## Quickstart
@@ -103,7 +105,7 @@ Benchmark expectations are declared before the audit is run. A clean control pro
 Prerequisites are Python 3.14, `uv`, Node.js 22, and npm. The default path is deterministic fixture mode and does not require an API key.
 
 ```bash
-git clone https://github.com/davidigutaorg/polygraph-ml.git
+git clone https://github.com/Iguta/polygraph-ml.git
 cd polygraph-ml
 make install
 make dev
@@ -120,7 +122,15 @@ make calibrate-queue
 
 For live-agent development, place `OPENAI_API_KEY` in the ignored `.env` and set `POLYGRAPHML_AGENT_MODE=live`. Never commit or paste a key into source or logs. AWS injects the production key into the worker from Secrets Manager; Vercel and the API task do not receive it.
 
-Once configured, `make live-smoke` runs one real model-system audit and writes a metadata-only, sanitized trace for review. It fails rather than silently accepting fixture degradation.
+Once configured, `make eval-live` runs exactly the three predeclared, cost-bounded live cases authorized for the release: the flagship, semantic proxy, and hard negative. The first failed run remains preserved at `benchmark-results/live-evaluation.json`; an approved repaired run writes metadata-only results to `benchmark-results/live-evaluation-rerun.json`. The command records model/tool-loop provenance, refuses to overwrite an existing record, and fails the gate if any run degrades to fixture mode. Do not rerun or broaden this sweep without explicit cost approval.
+
+After committing and pushing the expectation-bearing candidate, verify the manifest-first public path using its immutable commit—not a branch name:
+
+```bash
+REF=<40-character-commit-sha> make public-github-gate
+```
+
+This imports only the manifest-declared artifacts, verifies their hashes, runs the complete fixture audit and question/resume path, and writes sanitized evidence to `benchmark-results/public-github-gate.json`.
 
 To exercise the deployed API and worker boundary with a disposable live benchmark audit, run:
 
@@ -132,7 +142,7 @@ This verifies queue processing, question/resume, event replay, and deletion, the
 
 ## Status
 
-OpenAI Build Week 2026 — deployed React frontend and AWS API/worker vertical slice with sanitized local and public-path live-agent evidence. Production resilience drills, final Git review, and submission packaging remain open. Track: **Developer Tools**.
+OpenAI Build Week 2026 — the `v0.2.0` candidate has a locally verified flagship audit, typed multi-mechanism agent contract, bounded compute, repair bundle, generated frontend contracts, durable SSE/replay UI, seven-case fixture gate, two clean controls with zero false confirmations, a passing immutable public-GitHub audit, and a passing 3/3 live GPT-5.6 Sol gate. The previously deployed AWS/Vercel vertical slice remains live, but this candidate is **not** the public release until the evidence-bearing commit is reviewed, merged, deployed from one SHA, recorded, and smoke-tested. Track: **Developer Tools**.
 
 ## License
 

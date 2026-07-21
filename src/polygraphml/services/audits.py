@@ -150,7 +150,12 @@ class AuditService:
         self.repository.put(audit)
         return True
 
-    def create_report(self, audit: Audit, project: Project, audience: str) -> AuditReport:
+    def create_report(
+        self,
+        audit: Audit,
+        project: Project,
+        audience: Literal["technical", "executive"],
+    ) -> AuditReport:
         existing = next(
             (
                 report
@@ -173,7 +178,7 @@ class AuditService:
         report = AuditReport(
             report_id=new_id("rpt"),
             audit_id=audit.audit_id,
-            audience=audience,  # type: ignore[arg-type]
+            audience=audience,
             content=render_report(audit, project, findings, audience),
         )
         return self.repository.put(report)

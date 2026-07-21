@@ -9,6 +9,11 @@ RUN uv sync --frozen --no-dev --no-editable
 
 FROM python:3.14.1-slim-bookworm AS runtime
 
+ARG BUILD_SHA=unknown
+ARG RELEASE_VERSION=0.2.0
+LABEL org.opencontainers.image.revision="${BUILD_SHA}" \
+      org.opencontainers.image.version="${RELEASE_VERSION}"
+
 RUN groupadd --system polygraphml && useradd --system --gid polygraphml --home /app polygraphml \
     && mkdir /data && chown polygraphml:polygraphml /data
 WORKDIR /app

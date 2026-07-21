@@ -229,6 +229,7 @@ def test_s3_store_presign_checksum_download_and_retention_delete(tmp_path: Path)
     assert upload_url.startswith("https://")
     assert headers["x-amz-meta-sha256"] == digest
     assert headers["x-amz-server-side-encryption"] == "AES256"
+    assert store.presign_get(key).startswith("https://")
 
     store.delete_project("prj_1")
     assert client.list_objects_v2(Bucket="polygraphml-artifacts").get("KeyCount") == 0

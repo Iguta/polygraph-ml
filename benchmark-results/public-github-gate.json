@@ -1,0 +1,29 @@
+{
+  "agent_mode": "fixture",
+  "artifact_count": 5,
+  "artifact_hashes": {
+    ".polygraphml.yml": "5fb3ad0983d09fd3d8d339966267ae7d22a3085918de6fe479349351eada2b36",
+    "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.csv": "060671f9dcf10dbf76cda0dec39e8ab1b9c0787c4b93e31f1ca7fab95c508b39",
+    "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.ipynb": "365fac335a5e0b430ab42e591da7660713f1979b680bdc5451132c116d782af1",
+    "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops": "5c23908310184d18ce20f5a40cd2f16e19455ff7c9029d5fa86268b0e3ac8d90",
+    "src/polygraphml/benchmarks/data/uci_bank/derivation.txt": "61563a20dec3f395d2c57c9c673bdb744b71fc5f453c4d121a4f69b181c09d34"
+  },
+  "audit_status": "complete",
+  "confirmed_pairs": [
+    "post_outcome:duration"
+  ],
+  "corrected_metric": 0.7330845871361364,
+  "created_at": "2026-07-21T07:36:45.768785Z",
+  "event_count": 27,
+  "manifest_imported": true,
+  "metric": "roc_auc",
+  "payloads_included": false,
+  "question_answered": true,
+  "reported_metric": 0.871301,
+  "repository_url": "https://github.com/Iguta/polygraph-ml",
+  "reproduced_metric": 0.8713005400607956,
+  "requested_commit": "4925f8a4ba28fb06f96277bdb4b1ccc002f969b6",
+  "resolved_commit": "4925f8a4ba28fb06f96277bdb4b1ccc002f969b6",
+  "schema_version": "1",
+  "sensitive_data_included": false
+}

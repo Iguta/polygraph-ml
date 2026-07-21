@@ -1,6 +1,6 @@
 # Implementation Phases and Definition of Done — PolygraphML
 
-**Version:** 1.0 · **Owner:** David · **Date:** July 18, 2026
+**Version:** 1.2 · **Owner:** David · **Date:** July 21, 2026
 
 ## How to use this plan
 
@@ -51,6 +51,7 @@ Priority labels:
 - [x] Project/session endpoints and quota checks conform to the API contract.
 - [x] Presigned S3 upload flow verifies size, checksum, type, and project scope.
 - [x] Public GitHub import resolves the supplied ref to an immutable commit SHA.
+- [x] A strict root `.polygraphml.yml` path/hash/mapping/scenario/provenance contract is preferred and fetches only declared artifacts.
 - [x] Repository/archive validation rejects traversal, symlinks, device files, and expansion bombs.
 - [x] CSV and Parquet dataset adapters emit the canonical profile.
 - [x] `.skops` adapter accepts an allowlisted test model and rejects an unsupported type safely.
@@ -78,6 +79,7 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] Finding-policy tests prove that ablation delta alone cannot confirm leakage.
 - [x] Unsupported probes become visible limitations, not silent omissions.
 - [x] No quantitative result field accepts free-form model output.
+- [x] Approved `.skops` model operations run in a sanitized, resource-bounded child process and are explicitly labeled non-sandboxed.
 
 ## Phase 4 — GPT-5.6 audit agent and human loop (P0)
 
@@ -88,13 +90,14 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] OpenAI Agents SDK is pinned and configured explicitly with `gpt-5.6-sol` and the Responses API path.
 - [x] Local live mode reads `OPENAI_API_KEY`; production design reads Secrets Manager; neither path logs the value.
 - [x] Structured hypotheses include assumptions, rationale summary, probe request, and falsification condition.
+- [x] The typed planner accepts one to three hypotheses across post-outcome, target-proxy, and metric-contract mechanisms with compatibility validation.
 - [x] Every agent tool has a strict input/output schema and bounded execution behavior.
 - [x] Agent cannot directly set evidence metrics or promote findings outside the finding-policy tool.
 - [x] At least one benchmark triggers a material, concise follow-up question.
 - [x] Answer persistence and resume reevaluate the affected hypothesis.
 - [x] Reasoning summaries, if enabled, are labeled and stored separately from evidence.
 - [x] Schema failure retries are bounded and deterministic analysis remains available after degradation.
-- [x] Sanitized developer trace proves the real agent/tool loop without exposing secrets or raw data (`benchmark-results/live-trace.json`, 23 events, `gpt-5.6-sol`).
+- [x] The v0.2 repaired three-case live gate proves `post_outcome` and `target_proxy`, the flagship question, and hard-negative clearance with all three cases live and no degradation (`benchmark-results/live-evaluation-rerun.json`).
 
 ## Phase 5 — Durable AWS execution and event replay (P0)
 
@@ -132,6 +135,7 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] Keyboard navigation, focus order, contrast, and screen-reader names pass the chosen accessibility checks.
 - [x] Layout is verified at mobile, laptop, and 1080p recording sizes.
 - [x] Playwright covers upload/benchmark intake, mapping, question/resume, refresh/replay, verdict, and report.
+- [x] Playwright forces three SSE failures, observes polling fallback, verifies clean clearance and measured flagship correction, and downloads a valid repair archive.
 - [x] No fixture data, illustrative number, or live state is mislabeled.
 
 ## Phase 7 — Benchmark evaluation and release gate (P0)
@@ -145,11 +149,13 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] At least one multi-mechanism synthetic case passes.
 - [x] At least one fully clean control has zero confirmed findings.
 - [x] One public model + dataset + notebook/repository benchmark completes end to end.
-- [x] Expected findings are committed before live benchmark execution (`0d8f00c` contains the benchmark registry; the bounded live audit was rerun on July 20 after that commit).
-- [x] Precision/recall, false confirmations, reproduction error, corrected-metric error, latency, token usage, and estimated cost are reported.
+- [x] The new v0.2 expectations and prohibited claims were committed at `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5` before `make eval-live`.
+- [x] Raw case/pair counts, Wilson intervals, precision/recall, false confirmations, question usefulness, schema failures, degradation, reproduction/correction error, latency, token usage, and cost are reported.
 - [x] Public benchmark license and provenance are reviewable from the UI or repository.
 - [x] COVID-19 case is included only if reproducibility and licensing gates pass; otherwise it remains explicitly roadmap.
 - [x] Every metric in the demo script is replaced with captured benchmark output.
+- [x] The seven-case fixture gate has six exact expected pairs, zero false confirmations/negatives, and two clean controls with zero false confirmations.
+- [x] The root-manifest flagship imported through the public GitHub API at reviewed candidate `4925f8a4ba28fb06f96277bdb4b1ccc002f969b6`, verified five hashes, completed 27 events, and reproduced/corrected the declared metrics.
 
 ## Phase 8 — Deployment and submission readiness (P0)
 
@@ -157,67 +163,62 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 
 ### Definition of Done
 
-- [x] React production build is deployed to Vercel with the intended domain.
-- [x] FastAPI and worker images are deployed to AWS from pinned container digests.
+- [ ] The v0.2 React production build is deployed to Vercel from the release SHA. The prior vertical slice remains deployed but does not satisfy this candidate gate.
+- [ ] The v0.2 FastAPI and worker images are deployed to AWS from pinned container digests and the same release SHA.
 - [x] TLS, CORS, health checks, quotas, request limits, and artifact retention are configured.
 - [x] OpenAI key is stored in Secrets Manager and removed from any ad hoc deployment configuration.
 - [x] Repository and Git history pass secret scanning.
 - [x] Cold start, live audit, refresh/replay, question/resume, partial failure, and DLQ drills are recorded (`benchmark-results/cold-start-smoke.json` and `benchmark-results/resilience-drill.json` are metadata-only evidence).
-- [x] Critical CI, backend, benchmark, and Playwright suites are green from a clean checkout (GitHub Actions run `29714407361` on PR #1: backend, frontend/E2E, infrastructure, and secret scanning all passed).
-- [x] README instructions match the implemented commands and deployed behavior.
+- [x] Critical v0.2 CI, backend, benchmark, and Playwright suites are green from a clean checkout on PR #3; backend, frontend, infrastructure, secrets, and GPT-5.6 Terra pass at `13a88e5` before the live evidence commit.
+- [ ] README instructions and public `/version` metadata match the deployed v0.2 behavior and exact SHA.
 - [x] CODEX_USAGE contains real session IDs, commits, tests, and debugging examples.
 - [ ] Demo video stays under the limit and exposes no secrets/account details.
 - [ ] Submission metadata, public repository, video URL, and fallback recording are verified before deadline.
 
-## Verification snapshot — July 20, 2026
+## Verification snapshot — July 21, 2026
 
-The following checks were run against the current working tree:
+This table distinguishes the reviewed v0.2 candidate from historical evidence for the already deployed earlier slice.
 
-| Command | Result | What it proves |
+| Gate | Result | Scope |
 |---|---|---|
-| `make check` | Passed | Ruff format/lint, mypy, 45 backend tests at 81.27% coverage, 5 frontend tests, OpenAPI export, and whitespace checks pass. |
-| `make test-e2e` | Passed | Four Playwright scenarios pass: fixture verdict, refresh/resume, mobile, laptop, and 1080p recording layout coverage. |
-| Throwaway clean-checkout rehearsal | Passed | A temporary Git snapshot/clone completed dependency installation, `make check`, and `make test-e2e`; it validates release reproducibility but does not replace the final reviewed project commit. |
-| `make live-smoke` | Passed | Sanitized trace recorded with 23 events and model `gpt-5.6-sol`. |
-| `polygraphml-deployed-smoke --api-url … --mode live` | Passed | Public API → SQS → worker audit completed with replay, question/resume, and project deletion; output contains metadata only. |
-| Controlled retry/DLQ drill | Passed | A disposable missing-project fault retried three times, ended `failed_partial`/`dead_lettered`, reached the DLQ, and was cleaned (`benchmark-results/resilience-drill.json`). |
-| Worker cold-start smoke | Passed | The worker was scaled to zero, fresh-started, and then completed the public live audit flow (`benchmark-results/cold-start-smoke.json`). |
-| `polygraphml-queue-calibration --input benchmark-results/deployed-live-timings.json` | Passed | 20 deployed live durations; P95 32.666s, recommendation 161s, configured 300-second visibility and 60-second heartbeat cover the sample. |
-| AWS API health | Passed | ALB target healthy; `/healthz` at `api.polygraphml.davidiguta.com` returned HTTP 200. |
-| Vercel custom domain | Passed | `polygraphml.davidiguta.com` returned HTTP 200 over HTTPS. |
+| Backend suite | Passed | 94 tests and 80.95% branch-aware coverage locally; the same backend gate passes from a clean checkout on PR #3. |
+| `make test-e2e` | Passed | Six Playwright tests: forced SSE failure/polling fallback, refresh/replay, provenance-gated live label, flagship correction, executive/technical reports, repair download, clean clearance, axe checks, and mobile/laptop/1080p layout. |
+| `make benchmarks` | Passed | Seven fixture cases, six exact expected pairs, zero false confirmations/negatives, two clean controls, schema v2 raw counts and uncertainty. |
+| `make public-github-gate` | Passed | Immutable reviewed candidate `4925f8a4ba28fb06f96277bdb4b1ccc002f969b6`, five verified artifacts, 27 events, expected finding and three metrics. |
+| First authorized `make eval-live` | Failed honestly | Three cases completed once: flagship hypothesis/question succeeded but answer parsing left it inconclusive; semantic proxy used the wrong mechanism; hard negative degraded. Repair is implemented; another three-call run requires explicit approval. |
+| Approved repaired `make eval-live` | Passed | Exactly three cases, all live: flagship `post_outcome:duration` confirmed, `target_proxy:engagement_band` confirmed, and `post_outcome:previous_call_duration` cleared with zero false confirmation; 10,774 tokens and 65,408 ms aggregate agent latency. |
+| Terraform init/validate | Passed | AWS provider configuration, exact build-SHA input, repair-download permission, and current topology validate locally. |
+| Production npm dependency audit | Passed | Zero known production dependency vulnerabilities; dev-tool advisories are reviewed separately. |
+| Prior deployed smoke/resilience evidence | Historical pass | `deployed-smoke.json`, `cold-start-smoke.json`, `resilience-drill.json`, and `queue-timing-live.json` prove the earlier deployed slice, not the v0.2 candidate. |
 
-### Readiness summary
+### Current readiness
 
-- **P0 checklist:** implementation-controlled gates are complete; the overall P0 release checklist remains open for David-owned Phase 8 submission artifacts (demo video and submission metadata).
-- **Local MVP:** complete and verified through backend, frontend, contract, benchmark, and Playwright gates.
-- **Cloud deployment:** ACM is issued; the pinned ECS/ALB/SQS/DynamoDB/S3/WAF stack is applied; API and worker are healthy; the Vercel custom domain is live.
-- **Public release:** partially complete. The deployed URLs, committed implementation, green PR CI, live-agent evidence, cold-start, partial-failure, and DLQ recovery evidence work; final review, demo video, and submission packaging remain outstanding.
+- **Locally implemented:** typed multi-mechanism agent boundary, strict manifest/GitHub import, bounded compute, flagship/target-proxy/hard-negative cases, reports, deterministic repair, generated contracts, SSE fallback/replay, and truthful provenance UI.
+- **Verified:** complete backend/static/frontend checks, full fixture benchmark, immutable public-GitHub gate, Terraform validation, full Playwright path, and clean-checkout CI/Terra review.
+- **Still open for v0.2:** review the new live evidence in PR #3, deploy one release SHA/digest, rerun public smoke/resilience/deletion checks, rotate the key, and record both demos.
+- **Conditional bonus:** the Codex CLI/skill is intentionally deferred until every P0 gate and both recordings exist.
 
-These results prove the local fixture vertical slice, a real sanitized GPT-5.6 agent trace, deployed AWS/Vercel health surfaces, and the production resilience-drill matrix. The remaining P0 gates are final PR review and David-owned submission artifacts, not unverified runtime behavior.
+## Open-gate record — July 21, 2026
 
-## Open-gate record — July 19, 2026
+| Owner | Open gate | Why it remains open | Required evidence |
+|---|---|---|---|
+| Codex + David | v0.2 deployment | Current public URLs serve the earlier slice | Same release SHA in Vercel badge and backend `/version`, pinned ECR digests, public smoke evidence |
+| David | Credential rotation | Must occur immediately before the final deployment per the approved plan | Rotated local/Secrets Manager key without exposing its value, then worker redeployment and scans |
+| David + Codex | Recordings/submission | No final v0.2 live or labeled fixture recording exists yet | Verified video files/URLs, duration, metadata, and no secret/account exposure |
 
-| Owner | Open gate | Evidence/reason | Risk | Follow-up |
-|---|---|---|---|---|
-| David | Sanitized live trace | `make live-smoke` captured a metadata-only trace with 23 events and no sensitive payloads | Live semantic path is now demonstrated | Preserve the trace and include it in the reviewed submission evidence |
-| David + Codex | Live queue-duration calibration | `queue-timing-live.json` records 20 deployed live durations and confirms the configured 300-second visibility / 60-second heartbeat exceed the 161-second recommendation | Continue to revisit after materially larger workloads | Review the calibration during post-hackathon scaling work |
-| David + Codex | Benchmark expectation commit | Benchmark registry and expectations are in implementation commit `0d8f00c`; the bounded live audit was rerun afterward | None for the recorded run | Keep future benchmark expectation changes in a separate commit before execution |
-| David + Codex | Production resilience drills | DNS, ACM, ECS/ALB, Vercel, a deployed live audit, event replay, question/resume, deletion, controlled partial failure/DLQ handoff, and clean worker cold start are verified (`benchmark-results/resilience-drill.json`, `benchmark-results/cold-start-smoke.json`) | None | Retain metadata-only outputs for submission review |
-| David | Submission evidence | Public URL, implementation commit, and PR CI are recorded; video and final submission metadata are not yet available | Submission package is incomplete | Record and verify the final video, fallback recording, and metadata before deadline |
+## Next release actions
 
-## Next actions for the owner
-
-Complete these in order; each item is a prerequisite for the next release gate:
-
-1. **Review the release.** Mark PR #1 ready for review so the GPT-5.6 Terra reviewer can run, then merge after the review is accepted.
-2. **Package the submission.** Record and verify the public URL, demo video, fallback recording, and submission metadata.
+1. Let PR #3 clean-checkout CI and GPT-5.6 Terra review the exact live-evidence-bearing candidate.
+2. Merge through `dev` to `main`, tag `v0.2.0`, deploy one SHA/digest, rotate the key, and repeat public smoke/security checks.
+3. Record and verify the live demo, labeled fixture fallback, and submission metadata.
 
 ## P1 — Immediate post-core improvements
 
 - [ ] XGBoost adapter parity if cut from P0.
 - [ ] Limited ONNX equivalence checks.
 - [ ] More public benchmark cases.
-- [ ] Technical/executive report variants and PDF export.
+- [x] Technical/executive Markdown report variants and deterministic repair archive.
+- [ ] PDF export.
 - [ ] Private GitHub authentication.
 - [ ] Separate no-secret sandbox executor for approved notebook execution.
 

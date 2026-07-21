@@ -1,6 +1,6 @@
 # Product Requirements Document — PolygraphML
 
-**Version:** 1.1 · **Owner:** David · **Date:** July 18, 2026 · **Status:** Approved foundation
+**Version:** 1.2 · **Owner:** David · **Date:** July 21, 2026 · **Status:** v0.2 release candidate
 
 ## 1. Product statement
 
@@ -38,7 +38,7 @@ The user may upload:
 - one dataset (`.csv` or `.parquet`);
 - one model artifact (`.skops` for complete P0 reproduction; XGBoost `.json`/`.ubj` and ONNX are accepted only as visibly limited evidence);
 - an optional but strongly preferred `.ipynb` notebook or Python pipeline;
-- an optional `polygraphml.yaml` manifest mapping files and declaring the scenario.
+- an optional root `.polygraphml.yml` manifest mapping files and declaring the scenario, hashes, feature descriptions, provenance, and license.
 
 If the notebook deterministically trains and evaluates the model, a separate model artifact may be omitted. Dataset-only input can receive a labeled **preflight**, not a complete model audit.
 
@@ -60,7 +60,7 @@ If the notebook deterministically trains and evaluates the model, a separate mod
 6. Answer a focused follow-up question if the agent encounters a material ambiguity.
 7. Review reported vs. reproduced vs. corrected performance and finding status.
 8. Expand any finding to see evidence, source locations, what would change the conclusion, and how to rerun it.
-9. Download JSON/Markdown results or generate a stakeholder report.
+9. Generate an executive brief or technical report and, when safe, download the deterministic repair bundle.
 
 The screen-level behavior is defined in [PRODUCT_FLOW.md](PRODUCT_FLOW.md).
 
@@ -80,7 +80,7 @@ Capture target semantics, row/entity meaning, decision time, prediction horizon,
 
 ### FR-4 — Reproduction
 
-Run the submitted or reconstructed evaluation in an isolated worker with pinned inputs, seed capture, time/resource limits, and a persisted execution log. Report whether the claimed metric was reproduced within a declared tolerance.
+Evaluate an approved `.skops` artifact in a separate bounded child process with pinned inputs, seed capture, a 120-second wall timeout, 90-second CPU limit, 2 GiB address-space limit, bounded file descriptors/output, a sanitized environment, and persisted provenance. This boundary is explicitly not a sandbox. Submitted notebooks and repository source are inspected statically and are not executed in P0.
 
 ### FR-5 — Semantic audit
 
@@ -92,9 +92,9 @@ The initial tool suite includes:
 
 - feature availability and post-outcome checks;
 - single-feature predictive power;
-- exact and near-duplicate contamination;
+- exact contamination (near-duplicate similarity remains a visible limitation);
 - group/entity overlap across splits;
-- temporal ordering and future-window checks;
+- feature availability at the declared decision time (broader temporal backtesting remains a visible limitation);
 - target-proxy association;
 - preprocessing-fit-before-split inspection;
 - metric and split reconstruction;
@@ -116,7 +116,7 @@ Stream and persist sanitized events for assumptions, user answers, hypotheses, t
 
 ### FR-10 — Verdict and reports
 
-Render a polished technical verdict and generate a Markdown stakeholder report. Every reported number is copied from compute-layer objects. Exports include JSON and Markdown; PDF and email are stretch features.
+Render a polished verdict and materially different executive and technical Markdown reports. Every reported number is copied from compute-layer objects. For a supported unique literal feature list, generate a deterministic, hash-addressed repair bundle with a patch, correction record, protocol manifest, and rerun guidance; return `unavailable` instead of speculating when an exact edit cannot be established. PDF and email are stretch features.
 
 ### FR-11 — Benchmark mode
 
@@ -161,6 +161,7 @@ An audit continues after browser disconnect. The UI can resume using the last ev
 The hackathon MVP is accepted when all of the following are true:
 
 - a public GitHub benchmark or equivalent upload bundle containing model, data, and notebook completes end to end;
+- the flagship UCI Bank Marketing audit reproduces ROC AUC `0.8713005400607956` and computes corrected ROC AUC `0.7330845871361364` after the scenario establishes that current-call `duration` is unavailable;
 - the original metric is reproduced or the reproduction discrepancy is explicitly diagnosed;
 - at least one scenario-dependent issue causes a real follow-up question and resume;
 - at least one confirmed leakage/evaluation defect produces a corrected metric;
@@ -170,6 +171,7 @@ The hackathon MVP is accepted when all of the following are true:
 - browser refresh during an audit does not lose the job or its events;
 - the deployed Vercel/AWS demo works without exposing the OpenAI key;
 - the critical Playwright path and backend test suite are green.
+- the release artifact records exact frontend/backend build SHAs and passes the three-case bounded live gate without fixture degradation.
 
 ## 9. Explicit non-goals for the hackathon
 

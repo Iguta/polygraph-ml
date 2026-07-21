@@ -1,76 +1,338 @@
 {
+  "ablation_comparison": {
+    "deterministic_only": {
+      "can_confirm": false,
+      "can_establish_scenario_semantics": false,
+      "can_measure_association": true,
+      "decision": "tested"
+    },
+    "full_polygraphml": {
+      "can_confirm": true,
+      "decision": "confirmed_when_semantics_and_impact_agree",
+      "uses_compute_owned_metrics": true
+    },
+    "semantic_only": {
+      "can_confirm": false,
+      "can_measure_impact": false,
+      "can_propose_risk": true,
+      "decision": "tested"
+    }
+  },
   "aggregate": {
+    "case_count": 7,
+    "clean_control_count": 2,
+    "clean_control_false_confirmation_denominator": 2,
+    "clean_control_false_confirmation_numerator": 0,
     "cost_note": "Fixture evaluation makes no OpenAI API call.",
+    "defect_case_count": 5,
+    "degraded_case_count": 0,
     "estimated_openai_cost_usd": 0.0,
     "false_confirmations": 0,
     "false_negatives": 0,
-    "latency_seconds": 0.1984,
+    "feature_pair_exact_match_denominator": 7,
+    "feature_pair_exact_match_numerator": 7,
+    "latency_seconds": 22.5328,
     "max_corrected_metric_error": 0.0,
+    "mechanism_exact_match_denominator": 7,
+    "mechanism_exact_match_numerator": 7,
     "openai_tokens": 0,
     "precision": 1.0,
+    "precision_denominator": 6,
+    "precision_numerator": 6,
+    "precision_wilson_95": [
+      0.609657,
+      1.0
+    ],
+    "question_useful_denominator": 7,
+    "question_useful_numerator": 6,
     "recall": 1.0,
-    "true_positives": 4
+    "recall_denominator": 6,
+    "recall_numerator": 6,
+    "recall_wilson_95": [
+      0.609657,
+      1.0
+    ],
+    "schema_failure_count": 0,
+    "true_positives": 6
   },
   "cases": [
     {
+      "agent_mode": "fixture",
+      "association_auc": 0.8050363796447461,
+      "benchmark_id": "uci_bank_marketing_duration_v1",
+      "clean_control": false,
+      "corrected_metric": 0.7330845871361364,
+      "corrected_metric_error": 0.0,
+      "expected_confirmed": [
+        "post_outcome"
+      ],
+      "expected_pairs": [
+        "post_outcome:duration"
+      ],
+      "false_confirmation_count": 0,
+      "false_confirmations": [],
+      "false_negative_count": 0,
+      "feature_pair_exact_match": true,
+      "latency_seconds": 4.0768,
+      "license": "CC BY 4.0",
+      "mechanism_exact_match": true,
+      "observed_confirmed": [
+        "post_outcome"
+      ],
+      "observed_pairs": [
+        "post_outcome:duration"
+      ],
+      "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "post_outcome:duration"
+      ],
+      "question_text": "Is duration available at the declared decision moment, or only afterward?",
+      "question_useful": true,
+      "reproduction_error": 4.5993920438913705e-07,
+      "selected_feature": "duration",
+      "selected_mechanism": "post_outcome",
+      "test_negative": 11179,
+      "test_positive": 1481,
+      "test_rows": 12660,
+      "train_rows": 32551,
+      "true_positive_count": 1
+    },
+    {
+      "agent_mode": "fixture",
+      "association_auc": 1.0,
       "benchmark_id": "synthetic_campaign_leak_v1",
+      "clean_control": false,
       "corrected_metric": 0.8627956989247312,
       "corrected_metric_error": 0.0,
       "expected_confirmed": [
         "group_contamination",
         "post_outcome"
       ],
+      "expected_pairs": [
+        "group_contamination:household_id",
+        "post_outcome:call_duration"
+      ],
+      "false_confirmation_count": 0,
       "false_confirmations": [],
-      "latency_seconds": 0.0755,
+      "false_negative_count": 0,
+      "feature_pair_exact_match": true,
+      "latency_seconds": 3.6672,
       "license": "CC0-1.0",
+      "mechanism_exact_match": true,
       "observed_confirmed": [
         "group_contamination",
         "post_outcome"
       ],
-      "reproduction_error": 0.0
+      "observed_pairs": [
+        "group_contamination:household_id",
+        "post_outcome:call_duration"
+      ],
+      "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "group_contamination:household_id",
+        "post_outcome:call_duration"
+      ],
+      "question_text": "Is call_duration available at the declared decision moment, or only afterward?",
+      "question_useful": true,
+      "reproduction_error": 0.0,
+      "selected_feature": "call_duration",
+      "selected_mechanism": "post_outcome",
+      "test_negative": 93,
+      "test_positive": 75,
+      "test_rows": 168,
+      "train_rows": 432,
+      "true_positive_count": 2
     },
     {
+      "agent_mode": "fixture",
+      "association_auc": 1.0,
       "benchmark_id": "synthetic_post_outcome_only_v1",
+      "clean_control": false,
       "corrected_metric": 0.8627956989247312,
       "corrected_metric_error": 0.0,
       "expected_confirmed": [
         "post_outcome"
       ],
+      "expected_pairs": [
+        "post_outcome:call_duration"
+      ],
+      "false_confirmation_count": 0,
       "false_confirmations": [],
-      "latency_seconds": 0.0486,
+      "false_negative_count": 0,
+      "feature_pair_exact_match": true,
+      "latency_seconds": 3.7681,
       "license": "CC0-1.0",
+      "mechanism_exact_match": true,
       "observed_confirmed": [
         "post_outcome"
       ],
-      "reproduction_error": 0.0
+      "observed_pairs": [
+        "post_outcome:call_duration"
+      ],
+      "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "post_outcome:call_duration"
+      ],
+      "question_text": "Is call_duration available at the declared decision moment, or only afterward?",
+      "question_useful": true,
+      "reproduction_error": 0.0,
+      "selected_feature": "call_duration",
+      "selected_mechanism": "post_outcome",
+      "test_negative": 93,
+      "test_positive": 75,
+      "test_rows": 168,
+      "train_rows": 432,
+      "true_positive_count": 1
     },
     {
+      "agent_mode": "fixture",
+      "association_auc": 1.0,
       "benchmark_id": "synthetic_group_contamination_only_v1",
+      "clean_control": false,
       "corrected_metric": null,
       "corrected_metric_error": null,
       "expected_confirmed": [
         "group_contamination"
       ],
+      "expected_pairs": [
+        "group_contamination:household_id"
+      ],
+      "false_confirmation_count": 0,
       "false_confirmations": [],
-      "latency_seconds": 0.0365,
+      "false_negative_count": 0,
+      "feature_pair_exact_match": true,
+      "latency_seconds": 2.5419,
       "license": "CC0-1.0",
+      "mechanism_exact_match": true,
       "observed_confirmed": [
         "group_contamination"
       ],
-      "reproduction_error": 0.0
+      "observed_pairs": [
+        "group_contamination:household_id"
+      ],
+      "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "group_contamination:household_id"
+      ],
+      "question_text": "Is call_duration available at the declared decision moment, or only afterward?",
+      "question_useful": false,
+      "reproduction_error": 0.0,
+      "selected_feature": "call_duration",
+      "selected_mechanism": "post_outcome",
+      "test_negative": 93,
+      "test_positive": 75,
+      "test_rows": 168,
+      "train_rows": 432,
+      "true_positive_count": 1
     },
     {
-      "benchmark_id": "uci_covid_surveillance_clean_v1",
+      "agent_mode": "fixture",
+      "association_auc": 1.0,
+      "benchmark_id": "synthetic_semantic_proxy_v1",
+      "clean_control": false,
+      "corrected_metric": 0.8145254629629629,
+      "corrected_metric_error": 0.0,
+      "expected_confirmed": [
+        "target_proxy"
+      ],
+      "expected_pairs": [
+        "target_proxy:engagement_band"
+      ],
+      "false_confirmation_count": 0,
+      "false_confirmations": [],
+      "false_negative_count": 0,
+      "feature_pair_exact_match": true,
+      "latency_seconds": 3.6466,
+      "license": "CC0-1.0",
+      "mechanism_exact_match": true,
+      "observed_confirmed": [
+        "target_proxy"
+      ],
+      "observed_pairs": [
+        "target_proxy:engagement_band"
+      ],
+      "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "target_proxy:engagement_band"
+      ],
+      "question_text": "Is engagement_band derived from, assigned after, or independent of the prediction target?",
+      "question_useful": true,
+      "reproduction_error": 0.0,
+      "selected_feature": "engagement_band",
+      "selected_mechanism": "target_proxy",
+      "test_negative": 96,
+      "test_positive": 72,
+      "test_rows": 168,
+      "train_rows": 432,
+      "true_positive_count": 1
+    },
+    {
+      "agent_mode": "fixture",
+      "association_auc": 0.9172043010752688,
+      "benchmark_id": "synthetic_suspicious_hard_negative_v1",
+      "clean_control": true,
       "corrected_metric": null,
       "corrected_metric_error": null,
       "expected_confirmed": [],
+      "expected_pairs": [],
+      "false_confirmation_count": 0,
       "false_confirmations": [],
-      "latency_seconds": 0.035,
-      "license": "CC BY 4.0",
+      "false_negative_count": 0,
+      "feature_pair_exact_match": true,
+      "latency_seconds": 2.4283,
+      "license": "CC0-1.0",
+      "mechanism_exact_match": true,
       "observed_confirmed": [],
-      "reproduction_error": 0.0
+      "observed_pairs": [],
+      "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "post_outcome:previous_call_duration"
+      ],
+      "question_text": "Is previous_call_duration available at the declared decision moment, or only afterward?",
+      "question_useful": true,
+      "reproduction_error": 3.799283154748423e-07,
+      "selected_feature": "previous_call_duration",
+      "selected_mechanism": "post_outcome",
+      "test_negative": 93,
+      "test_positive": 75,
+      "test_rows": 168,
+      "train_rows": 432,
+      "true_positive_count": 0
+    },
+    {
+      "agent_mode": "fixture",
+      "association_auc": 0.75,
+      "benchmark_id": "uci_covid_surveillance_clean_v1",
+      "clean_control": true,
+      "corrected_metric": null,
+      "corrected_metric_error": null,
+      "expected_confirmed": [],
+      "expected_pairs": [],
+      "false_confirmation_count": 0,
+      "false_confirmations": [],
+      "false_negative_count": 0,
+      "feature_pair_exact_match": true,
+      "latency_seconds": 2.3996,
+      "license": "CC BY 4.0",
+      "mechanism_exact_match": true,
+      "observed_confirmed": [],
+      "observed_pairs": [],
+      "openai_tokens": 0,
+      "predeclared_question_pairs": [
+        "post_outcome:A07"
+      ],
+      "question_text": "Is A07 available at the declared decision moment, or only afterward?",
+      "question_useful": true,
+      "reproduction_error": 0.0,
+      "selected_feature": "A07",
+      "selected_mechanism": "post_outcome",
+      "test_negative": 2,
+      "test_positive": 2,
+      "test_rows": 4,
+      "train_rows": 10,
+      "true_positive_count": 0
     }
   ],
   "mode": "fixture",
-  "schema_version": "1"
+  "schema_version": "2"
 }

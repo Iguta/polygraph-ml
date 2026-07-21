@@ -6,10 +6,19 @@ import pytest
 from fastapi.testclient import TestClient
 
 from polygraphml.api.container import AppContainer
+from polygraphml.api.main import app
 from polygraphml.config import Settings
 from polygraphml.domain.models import ArtifactKind
 from polygraphml.errors import PolygraphError
 from polygraphml.services.projects import ProjectService, adapter_for
+
+
+def test_decision_trace_contract_advertises_json_replay_and_sse() -> None:
+    operation = app.openapi()["paths"]["/api/v1/audits/{audit_id}/events"]["get"]
+    content = operation["responses"]["200"]["content"]
+
+    assert set(content) == {"application/json", "text/event-stream"}
+    assert content["text/event-stream"]["schema"] == {"type": "string"}
 
 
 def test_auth_scope_and_strict_request_contract(
@@ -22,9 +31,15 @@ def test_auth_scope_and_strict_request_contract(
         "agent_mode": "fixture",
         "live_agent_ready": False,
     }
+    assert client.get("/version").json() == {
+        "api_version": "1.2",
+        "release_version": "0.2.0",
+        "build_sha": "unknown",
+        "evaluator_version": "0.2.0",
+    }
     assert client.get("/api/v1/benchmarks").status_code == 401
     benchmarks = client.get("/api/v1/benchmarks", headers=headers).json()["data"]
-    assert benchmarks[0]["benchmark_id"] == "synthetic_campaign_leak_v1"
+    assert benchmarks[0]["benchmark_id"] == "uci_bank_marketing_duration_v1"
     response = client.post(
         "/api/v1/projects",
         headers=headers,

@@ -1,4 +1,4 @@
-.PHONY: dev api worker frontend format lint typecheck test test-backend test-frontend test-e2e contracts benchmarks calibrate-queue live-smoke deployed-smoke deployment-preflight check install
+.PHONY: dev api worker frontend format lint typecheck test test-backend test-frontend test-e2e contracts benchmarks calibrate-queue public-github-gate eval-live live-smoke deployed-smoke deployment-preflight check install
 
 install:
 	uv sync --all-groups
@@ -48,8 +48,15 @@ contracts:
 benchmarks:
 	uv run polygraphml-benchmarks --output benchmark-results/latest.json
 
+eval-live:
+	uv run polygraphml-live-evaluation --output benchmark-results/live-evaluation-rerun.json
+
 calibrate-queue:
 	uv run polygraphml-queue-calibration --input benchmark-results/latest.json --output benchmark-results/queue-timing.json
+
+public-github-gate:
+	@test -n "$(REF)" || (echo "Set REF to the committed 40-character SHA" && exit 2)
+	uv run polygraphml-public-github-gate --commit "$(REF)" --output benchmark-results/public-github-gate.json
 
 live-smoke:
 	uv run polygraphml-live-smoke --output benchmark-results/live-trace.json

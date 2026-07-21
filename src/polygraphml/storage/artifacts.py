@@ -47,6 +47,8 @@ class ArtifactStore(Protocol):
         self, storage_key: str, media_type: str, sha256: str
     ) -> tuple[str, dict[str, str]] | None: ...
 
+    def presign_get(self, storage_key: str) -> str | None: ...
+
     def delete_project(self, project_id: str) -> None: ...
 
 
@@ -159,6 +161,9 @@ class LocalArtifactStore:
     def presign_put(
         self, storage_key: str, media_type: str, sha256: str
     ) -> tuple[str, dict[str, str]] | None:
+        return None
+
+    def presign_get(self, storage_key: str) -> str | None:
         return None
 
     def delete_project(self, project_id: str) -> None:
@@ -281,6 +286,15 @@ class S3ArtifactStore:
         )
         headers["x-amz-server-side-encryption"] = "AES256"
         return str(url), headers
+
+    def presign_get(self, storage_key: str) -> str:
+        return str(
+            self.client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": self.bucket, "Key": self._object_key(storage_key)},
+                ExpiresIn=900,
+            )
+        )
 
     def delete_project(self, project_id: str) -> None:
         prefix = self._object_key(project_id).rstrip("/") + "/"

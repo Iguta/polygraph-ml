@@ -20,12 +20,15 @@ import type {
   Project,
   Question,
   Readiness,
+  RepairBundle,
   Scenario,
+  Version,
 } from "./types";
 
 type View = "intake" | "mapping" | "scenario" | "audit";
 const AUDIT_KEY = "polygraphml.active-audit";
 const PROJECT_KEY = "polygraphml.active-project";
+const FRONTEND_BUILD_SHA = import.meta.env.VITE_BUILD_SHA ?? "local";
 
 export function App() {
   const [view, setView] = useState<View>("intake");
@@ -33,10 +36,21 @@ export function App() {
   const [audit, setAudit] = useState<Audit | null>(null);
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [readiness, setReadiness] = useState<Readiness | null>(null);
+  const [version, setVersion] = useState<Version | null>(null);
+  const [eventTransport, setEventTransport] = useState<
+    "idle" | "sse" | "reconnecting" | "polling"
+  >("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<string | null>(null);
+  const [reportAudience, setReportAudience] = useState<
+    "technical" | "executive"
+  >("technical");
+  const [repair, setRepair] = useState<RepairBundle | null>(null);
   const lastSequence = useRef(0);
+  const lastEventId = useRef<string | null>(null);
+  const activeAuditId = audit?.audit_id;
+  const activeAuditStatus = audit?.status;
 
   const fail = useCallback((cause: unknown) => {
     setBusy(false);
@@ -56,6 +70,7 @@ export function App() {
     if (nextEvents.length > 0) {
       lastSequence.current =
         nextEvents.at(-1)?.sequence ?? lastSequence.current;
+      lastEventId.current = nextEvents.at(-1)?.event_id ?? lastEventId.current;
       setEvents((current) => {
         const known = new Set(current.map((event) => event.event_id));
         return [
@@ -71,8 +86,14 @@ export function App() {
     async function loadReadiness() {
       for (let attempt = 0; attempt < 10; attempt += 1) {
         try {
-          const status = await api.readiness();
-          if (!cancelled) setReadiness(status);
+          const [status, build] = await Promise.all([
+            api.readiness(),
+            api.version(),
+          ]);
+          if (!cancelled) {
+            setReadiness(status);
+            setVersion(build);
+          }
           return;
         } catch (cause) {
           if (attempt === 9) {
@@ -106,19 +127,101 @@ export function App() {
 
   useEffect(() => {
     if (
-      !audit ||
+      !activeAuditId ||
       view !== "audit" ||
-      ["complete", "failed", "failed_partial"].includes(audit.status)
-    )
+      ["complete", "failed", "failed_partial", "waiting_for_user"].includes(
+        activeAuditStatus ?? "",
+      )
+    ) {
       return;
-    const timer = window.setInterval(
-      () => void refreshAudit(audit.audit_id).catch(fail),
-      650,
-    );
-    return () => window.clearInterval(timer);
-  }, [audit, fail, refreshAudit, view]);
+    }
+    const auditId = activeAuditId;
+    const controller = new AbortController();
+    let cancelled = false;
+    let reconnectTimer: number | undefined;
+    let pollingTimer: number | undefined;
 
-  async function chooseBenchmark(benchmarkId = "synthetic_campaign_leak_v1") {
+    const appendEvent = (event: AuditEvent) => {
+      lastSequence.current = Math.max(lastSequence.current, event.sequence);
+      lastEventId.current = event.event_id;
+      setEvents((current) =>
+        current.some((item) => item.event_id === event.event_id)
+          ? current
+          : [...current, event],
+      );
+    };
+
+    const poll = async () => {
+      try {
+        await refreshAudit(auditId);
+      } catch (cause) {
+        if (!cancelled) fail(cause);
+      }
+    };
+
+    const connect = async (attempt: number) => {
+      if (cancelled) return;
+      setEventTransport(attempt === 0 ? "sse" : "reconnecting");
+      try {
+        await api.streamEvents(
+          auditId,
+          lastSequence.current,
+          lastEventId.current,
+          appendEvent,
+          controller.signal,
+        );
+        if (cancelled) return;
+        const latest = await api.audit(auditId);
+        setAudit(latest);
+        if (
+          ["complete", "failed", "failed_partial", "waiting_for_user"].includes(
+            latest.status,
+          )
+        ) {
+          setEventTransport("idle");
+        }
+        if (
+          ![
+            "complete",
+            "failed",
+            "failed_partial",
+            "waiting_for_user",
+          ].includes(latest.status)
+        ) {
+          const delay = Math.min(500 * 2 ** attempt, 5_000);
+          reconnectTimer = window.setTimeout(
+            () => void connect(attempt + 1),
+            delay,
+          );
+        }
+      } catch {
+        if (cancelled || controller.signal.aborted) return;
+        if (attempt < 2) {
+          const delay = Math.min(500 * 2 ** attempt, 5_000);
+          reconnectTimer = window.setTimeout(
+            () => void connect(attempt + 1),
+            delay,
+          );
+          return;
+        }
+        setEventTransport("polling");
+        await poll();
+        pollingTimer = window.setInterval(() => void poll(), 1_500);
+      }
+    };
+
+    void connect(0);
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      if (pollingTimer) window.clearInterval(pollingTimer);
+    };
+  }, [activeAuditId, activeAuditStatus, fail, refreshAudit, view]);
+
+  async function chooseBenchmark(
+    benchmarkId = "uci_bank_marketing_duration_v1",
+  ) {
     setBusy(true);
     setError(null);
     try {
@@ -221,6 +324,7 @@ export function App() {
       setAudit(started);
       setEvents([]);
       lastSequence.current = 0;
+      lastEventId.current = null;
       setView("audit");
       sessionStorage.setItem(AUDIT_KEY, started.audit_id);
       sessionStorage.setItem(PROJECT_KEY, project.project_id);
@@ -251,13 +355,46 @@ export function App() {
     }
   }
 
-  async function generateReport() {
+  async function generateReport(audience: "technical" | "executive") {
     if (!audit) return;
     setBusy(true);
     setError(null);
     try {
-      const generated = await api.report(audit.audit_id, "technical");
+      const generated = await api.report(audit.audit_id, audience);
       setReport(generated.content);
+      setReportAudience(audience);
+    } catch (cause) {
+      fail(cause);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function generateRepair() {
+    if (!audit) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setRepair(await api.repairBundle(audit.audit_id));
+    } catch (cause) {
+      fail(cause);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function downloadRepair() {
+    if (!repair?.download_url || !audit) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const blob = await api.downloadRepair(repair.download_url);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `polygraphml-${audit.audit_id}-repair.zip`;
+      anchor.click();
+      URL.revokeObjectURL(url);
     } catch (cause) {
       fail(cause);
     } finally {
@@ -273,8 +410,10 @@ export function App() {
     setAudit(null);
     setEvents([]);
     setReport(null);
+    setRepair(null);
     setError(null);
     lastSequence.current = 0;
+    lastEventId.current = null;
   }
 
   const currentStep =
@@ -324,21 +463,47 @@ export function App() {
           </span>
         </button>
         <div className="mode-area">
-          {readiness === null ? (
+          {audit?.provenance.agent_execution?.mode === "live" &&
+          audit.provenance.agent_execution.provider === "openai" ? (
+            <span className="mode-badge live">
+              <Wifi aria-hidden="true" /> Live ·{" "}
+              {audit.provenance.agent_execution.resolved_model ??
+                audit.provenance.agent_execution.requested_model}
+            </span>
+          ) : audit?.provenance.agent_execution?.mode === "degraded" ? (
+            <span className="mode-badge degraded">
+              <TriangleAlert aria-hidden="true" /> Degraded · fixture fallback
+            </span>
+          ) : audit?.provenance.agent_execution?.mode === "fixture" ? (
+            <span className="mode-badge fixture">
+              <FlaskConical aria-hidden="true" /> Fixture · no live model call
+            </span>
+          ) : readiness === null ? (
             <span className="mode-badge">
               <Radio aria-hidden="true" /> Connecting to audit service…
             </span>
-          ) : readiness.agent_mode === "fixture" ? (
-            <span className="mode-badge fixture">
-              <FlaskConical aria-hidden="true" /> Fixture audit · no live model
-              call
-            </span>
           ) : (
-            <span className="mode-badge live">
-              <Wifi aria-hidden="true" /> Live GPT-5.6 audit
+            <span className="mode-badge">
+              <Radio aria-hidden="true" /> Audit service ready ·{" "}
+              {readiness.live_agent_ready
+                ? "live configured"
+                : "fixture configured"}
             </span>
           )}
-          <a href="https://github.com" target="_blank" rel="noreferrer">
+          {version && (
+            <span
+              className="build-badge"
+              title={`Frontend ${FRONTEND_BUILD_SHA}; API ${version.build_sha}`}
+            >
+              {version.release_version} · FE {FRONTEND_BUILD_SHA.slice(0, 8)} ·
+              API {version.build_sha.slice(0, 8)}
+            </span>
+          )}
+          <a
+            href="https://github.com/Iguta/polygraph-ml/tree/main/docs"
+            target="_blank"
+            rel="noreferrer"
+          >
             Docs
           </a>
         </div>
@@ -384,8 +549,14 @@ export function App() {
             events={events}
             busy={busy}
             report={report}
+            reportAudience={reportAudience}
+            repair={repair}
+            eventTransport={eventTransport}
+            backendVersion={version}
             onAnswer={(question, value) => void answer(question, value)}
-            onReport={() => void generateReport()}
+            onReport={(audience) => void generateReport(audience)}
+            onRepair={() => void generateRepair()}
+            onDownloadRepair={() => void downloadRepair()}
             onRestart={restart}
           />
         )}
