@@ -22,6 +22,7 @@ MAX_TOTAL_FILES = MAX_REVIEW_CHUNKS * MAX_FILES_PER_CHUNK
 MAX_TOTAL_PATCH_CHARACTERS = MAX_REVIEW_CHUNKS * MAX_PATCH_CHARACTERS_PER_CHUNK
 MAX_OMITTED_ARTIFACT_BYTES = 10 * 1024 * 1024
 MAX_MANIFEST_BYTES = 256 * 1024
+HTTP_TIMEOUT_SECONDS = 90
 REVIEW_NONEXECUTABLE_ARTIFACTS = {
     "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.csv": (
         "non-executable public benchmark table; exact hash is pinned in the root manifest "
@@ -87,7 +88,7 @@ def request_json(
         headers["Content-Type"] = "application/json"
     with urlopen(  # noqa: S310 -- origin is checked immediately above
         Request(url, data=payload, headers=headers, method=method),  # noqa: S310
-        timeout=30,
+        timeout=HTTP_TIMEOUT_SECONDS,
     ) as response:
         return json.loads(response.read())
 
