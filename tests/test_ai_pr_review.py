@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import importlib.util
 from pathlib import Path
 
@@ -82,25 +83,46 @@ def test_collect_diff_inventories_non_executable_artifact_without_truncating(
     monkeypatch,
 ) -> None:
     artifact = b"safe model bytes"
+    artifact_path = "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops"
+    artifact_sha256 = hashlib.sha256(artifact).hexdigest()
+    manifest = (
+        f"provenance:\n  artifact_hashes:\n    {artifact_path}: {artifact_sha256}\n"
+    ).encode()
     files = [
         {
-            "filename": "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops",
+            "filename": artifact_path,
             "patch": None,
             "sha": "a" * 40,
             "status": "added",
             "additions": 0,
             "deletions": 0,
         },
+        {
+            "filename": ".polygraphml.yml",
+            "patch": f"+    {artifact_path}: {artifact_sha256}",
+            "sha": "b" * 40,
+        },
         {"filename": "src/reviewable.py", "patch": "+safe = True"},
     ]
 
     def fake_github_api(path, **kwargs):
         del kwargs
-        if "/git/blobs/" in path:
+        if path.endswith("/" + "a" * 40):
             return {
                 "encoding": "base64",
-                "content": base64.b64encode(artifact).decode(),
+                "content": "\n".join(
+                    [
+                        base64.b64encode(artifact).decode()[:8],
+                        base64.b64encode(artifact).decode()[8:],
+                    ]
+                ),
                 "size": len(artifact),
+            }
+        if path.endswith("/" + "b" * 40):
+            return {
+                "encoding": "base64",
+                "content": base64.b64encode(manifest).decode(),
+                "size": len(manifest),
             }
         return files
 
@@ -111,6 +133,7 @@ def test_collect_diff_inventories_non_executable_artifact_without_truncating(
     assert truncated is False
     assert "Binary/large non-executable content omitted" in chunks[0]
     assert "safe adapter inspects untrusted types" in chunks[0]
+    assert "matched the reviewed root manifest" in chunks[0]
     assert "credential scan passed" in chunks[0]
     assert "src/reviewable.py" in chunks[0]
 
@@ -154,12 +177,39 @@ def test_omitted_artifact_fails_closed_on_credential_material(monkeypatch) -> No
             "owner/repo",
             "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops",
             "b" * 40,
+            hashlib.sha256(artifact).hexdigest(),
             "token",
         )
     except RuntimeError as exc:
         assert "credential material" in str(exc)
     else:
         raise AssertionError("Credential material must fail the omitted-artifact review.")
+
+
+def test_omitted_artifact_must_match_reviewed_manifest_digest(monkeypatch) -> None:
+    artifact = b"safe model bytes"
+    monkeypatch.setattr(
+        reviewer,
+        "github_api",
+        lambda *args, **kwargs: {
+            "encoding": "base64",
+            "content": base64.b64encode(artifact).decode(),
+            "size": len(artifact),
+        },
+    )
+
+    try:
+        reviewer.inspect_omitted_artifact(
+            "owner/repo",
+            "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops",
+            "c" * 40,
+            "d" * 64,
+            "token",
+        )
+    except RuntimeError as exc:
+        assert "reviewed manifest SHA-256" in str(exc)
+    else:
+        raise AssertionError("An omitted artifact must match its reviewed manifest digest.")
 
 
 def test_collect_diff_fails_closed_for_unexpected_binary(monkeypatch) -> None:
