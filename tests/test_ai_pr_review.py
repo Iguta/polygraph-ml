@@ -77,7 +77,7 @@ def test_collect_diff_splits_a_complete_large_pr_into_safe_chunks(monkeypatch) -
     assert f"src/file_{reviewer.MAX_FILES_PER_CHUNK}.py" in chunks[1]
 
 
-def test_collect_diff_inventories_allowlisted_derived_artifact_without_truncating(
+def test_collect_diff_inventories_non_executable_artifact_without_truncating(
     monkeypatch,
 ) -> None:
     files = [
@@ -95,8 +95,19 @@ def test_collect_diff_inventories_allowlisted_derived_artifact_without_truncatin
     chunks, truncated = reviewer.collect_diff("owner/repo", 1, "token")
 
     assert truncated is False
-    assert "Content omitted by the trusted review policy" in chunks[0]
+    assert "Binary/large non-executable content omitted" in chunks[0]
+    assert "safe adapter inspects untrusted types" in chunks[0]
     assert "src/reviewable.py" in chunks[0]
+
+
+def test_collect_diff_reviews_generated_executable_client_in_full(monkeypatch) -> None:
+    files = [{"filename": "frontend/src/generated/api.ts", "patch": "+export const safe = true"}]
+    monkeypatch.setattr(reviewer, "github_api", lambda *args, **kwargs: files)
+
+    chunks, truncated = reviewer.collect_diff("owner/repo", 1, "token")
+
+    assert truncated is False
+    assert "+export const safe = true" in chunks[0]
 
 
 def test_collect_diff_fails_closed_for_unexpected_binary(monkeypatch) -> None:

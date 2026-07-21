@@ -15,21 +15,19 @@ MODEL = "gpt-5.6-terra"
 MARKER = "<!-- polygraphml-ai-pr-review -->"
 MAX_REVIEW_CHUNKS = 4
 MAX_FILES_PER_CHUNK = 40
-MAX_PATCH_CHARACTERS_PER_CHUNK = 120_000
+MAX_PATCH_CHARACTERS_PER_CHUNK = 150_000
 MAX_TOTAL_FILES = MAX_REVIEW_CHUNKS * MAX_FILES_PER_CHUNK
 MAX_TOTAL_PATCH_CHARACTERS = MAX_REVIEW_CHUNKS * MAX_PATCH_CHARACTERS_PER_CHUNK
-REVIEW_EXCLUDED_PATHS = frozenset(
-    {
-        "benchmark-results/latest.json",
-        "benchmark-results/live-evaluation.json",
-        "benchmark-results/public-github-gate.json",
-        "benchmark-results/queue-timing.json",
-        "frontend/src/generated/api.ts",
-        "packages/contracts/openapi.json",
-        "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.csv",
-        "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops",
-    }
-)
+REVIEW_NONEXECUTABLE_ARTIFACTS = {
+    "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.csv": (
+        "non-executable public benchmark table; exact hash is pinned in the root manifest "
+        "and its deterministic generator, derivation record, and benchmark tests are reviewed"
+    ),
+    "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops": (
+        "non-source model artifact; exact hash is pinned in the root manifest and the safe "
+        "adapter inspects untrusted types before loading"
+    ),
+}
 SUSPICIOUS_CONTENT = re.compile(
     r"(?:sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----)",
     re.IGNORECASE,
@@ -111,12 +109,12 @@ def collect_diff(repository: str, pull_number: int, token: str) -> tuple[list[st
         for changed_file in files:
             filename = str(changed_file.get("filename", "unknown"))
             patch = changed_file.get("patch")
-            if filename in REVIEW_EXCLUDED_PATHS:
+            if filename in REVIEW_NONEXECUTABLE_ARTIFACTS:
                 entry = (
                     f"\n--- {filename}\n"
-                    "[Content omitted by the trusted review policy: generated or "
-                    "hash-addressed artifact. Review its generator, manifest, contract tests, "
-                    f"and source-of-truth files. status={changed_file.get('status', 'unknown')} "
+                    "[Binary/large non-executable content omitted by the trusted review policy. "
+                    f"Rationale: {REVIEW_NONEXECUTABLE_ARTIFACTS[filename]}. "
+                    f"status={changed_file.get('status', 'unknown')} "
                     f"additions={changed_file.get('additions', 'unknown')} "
                     f"deletions={changed_file.get('deletions', 'unknown')}]\n"
                 )
