@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import io
+import zipfile
 from datetime import timedelta
 
 import pytest
@@ -8,6 +11,7 @@ from fastapi.testclient import TestClient
 from polygraphml.api.container import AppContainer
 from polygraphml.config import Settings
 from polygraphml.domain.models import Audit, AuditStatus, EventType, Finding, utc_now
+from polygraphml.errors import PolygraphError
 from polygraphml.worker.coordinator import AuditCoordinator
 
 
@@ -91,6 +95,9 @@ async def test_fixture_benchmark_question_resume_verdict_and_report(
     assert audit["metric_comparison"]["reported"]["protocol_id"] == "reported_claim_unverified"
     assert audit["metric_comparison"]["reported"]["reproduction_tier"] == "reported_claim"
     assert audit["metric_comparison"]["reproduced"]["reproduction_tier"] == "exact_supported"
+    assert audit["provenance"]["compute_execution"]["mode"] == "bounded_subprocess"
+    assert audit["provenance"]["compute_execution"]["sandboxed"] is False
+    assert audit["provenance"]["agent_execution"]["mode"] == "fixture"
     assert len(audit["open_questions"]) == 1
     question = audit["open_questions"][0]
     assert question["why_it_matters"]
@@ -155,6 +162,37 @@ async def test_fixture_benchmark_question_resume_verdict_and_report(
     assert report_response.status_code == 200
     report = report_response.json()["data"]
     assert "Reported, reproduced, and corrected performance" in report["content"]
+    assert "Deterministic compute provenance" in report["content"]
+    executive = client.post(
+        f"/api/v1/audits/{audit['audit_id']}/report",
+        headers=headers,
+        json={"audience": "executive"},
+    ).json()["data"]
+    assert "Executive decision brief" in executive["content"]
+    assert "Business impact" in executive["content"]
+    assert "Package versions" not in executive["content"]
+    assert executive["content"] != report["content"]
+
+    repair_response = client.post(
+        f"/api/v1/audits/{audit['audit_id']}/repair-bundle", headers=headers
+    )
+    assert repair_response.status_code == 200
+    repair = repair_response.json()["data"]
+    assert repair["status"] == "available"
+    assert repair["download_url"].startswith("/api/v1/audits/")
+    downloaded = client.get(repair["download_url"], headers=headers)
+    assert downloaded.status_code == 200
+    assert hashlib.sha256(downloaded.content).hexdigest() == repair["sha256"]
+    with zipfile.ZipFile(io.BytesIO(downloaded.content)) as archive:
+        assert set(archive.namelist()) == {
+            "README.md",
+            "correction.json",
+            "feature-list.patch",
+            "protocol.json",
+        }
+        patch = archive.read("feature-list.patch").decode()
+        assert "-features =" in patch
+        assert "call_duration" in patch
     assert "call_duration" in report["content"]
 
     with client.stream(
@@ -247,6 +285,45 @@ async def test_retryable_worker_error_returns_audit_to_queue(
     retried = client.get(f"/api/v1/audits/{audit['audit_id']}", headers=headers).json()["data"]
     assert retried["status"] == "queued"
     assert container.repository.job_rows(audit["audit_id"])[0]["status"] == "queued"
+
+
+async def test_compute_timeout_is_visible_inconclusive_and_not_retried(
+    authorized_client: tuple[TestClient, AppContainer, Settings, dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, container, settings, headers = authorized_client
+    project = client.post(
+        "/api/v1/projects/from-benchmark",
+        headers=headers,
+        json={"benchmark_id": "synthetic_campaign_leak_v1"},
+    ).json()["data"]
+    audit = client.post(
+        "/api/v1/audits",
+        headers={**headers, "Idempotency-Key": "bounded-timeout"},
+        json={
+            "project_id": project["project_id"],
+            "scenario_revision": 1,
+            "mode": "complete_audit",
+        },
+    ).json()["data"]
+    coordinator = AuditCoordinator(
+        settings, container.repository, container.artifacts, container.queue
+    )
+    job = container.queue.receive()
+    assert job is not None
+
+    async def time_out(_: object) -> None:
+        raise PolygraphError("EXECUTION_TIMEOUT", "Bounded evaluation timed out.")
+
+    monkeypatch.setattr(coordinator, "_start", time_out)
+    await coordinator.process(job)
+
+    completed = client.get(f"/api/v1/audits/{audit['audit_id']}", headers=headers).json()["data"]
+    assert completed["status"] == "failed_partial"
+    assert completed["checkpoint"] == "compute_inconclusive"
+    assert completed["verdict"]["trust_state"] == "inconclusive"
+    assert completed["findings"][0]["status"] == "inconclusive"
+    assert container.repository.job_rows(audit["audit_id"])[0]["status"] == "complete"
 
 
 async def test_public_uci_covid_model_data_and_notebook_clean_control(

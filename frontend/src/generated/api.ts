@@ -72,6 +72,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/audits/{audit_id}/repair-bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Repair Bundle */
+        post: operations["create_repair_bundle_api_v1_audits__audit_id__repair_bundle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audits/{audit_id}/repair-bundle/{bundle_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Repair Bundle */
+        get: operations["download_repair_bundle_api_v1_audits__audit_id__repair_bundle__bundle_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/audits/{audit_id}/report": {
         parameters: {
             query?: never;
@@ -260,10 +294,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/version": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Version */
+        get: operations["version_version_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Actor
+         * @enum {string}
+         */
+        Actor: "user" | "agent" | "tool" | "system";
+        /**
+         * AdapterStatus
+         * @enum {string}
+         */
+        AdapterStatus: "supported" | "limited" | "unsupported" | "rejected";
+        /** AgentExecutionProvenance */
+        AgentExecutionProvenance: {
+            /** Failure Code */
+            failure_code?: string | null;
+            /**
+             * Harness Version
+             * @default audit-v2
+             */
+            harness_version: string;
+            /**
+             * Input Tokens
+             * @default 0
+             */
+            input_tokens: number;
+            /**
+             * Latency Ms
+             * @default 0
+             */
+            latency_ms: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "live" | "fixture" | "degraded";
+            /**
+             * Output Tokens
+             * @default 0
+             */
+            output_tokens: number;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "openai" | "fixture";
+            /**
+             * Reasoning Effort
+             * @default high
+             * @enum {string}
+             */
+            reasoning_effort: "low" | "medium" | "high" | "xhigh" | "max";
+            /** Request Id */
+            request_id?: string | null;
+            /** Requested Model */
+            requested_model: string;
+            /** Resolved Model */
+            resolved_model?: string | null;
+            /** Response Id */
+            response_id?: string | null;
+            /**
+             * Total Tokens
+             * @default 0
+             */
+            total_tokens: number;
+            /** Trace Id */
+            trace_id?: string | null;
+        };
         /** AnswerRequest */
         AnswerRequest: {
             /** Answer */
@@ -275,16 +392,224 @@ export interface components {
                 [key: string]: string;
             } | null;
         };
+        /** Artifact */
+        Artifact: {
+            /** Adapter */
+            adapter: string;
+            adapter_status: components["schemas"]["AdapterStatus"];
+            /** Artifact Id */
+            artifact_id: string;
+            /** Client Id */
+            client_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Filename */
+            filename: string;
+            kind: components["schemas"]["ArtifactKind"];
+            /** Media Type */
+            media_type: string;
+            /** Project Id */
+            project_id: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Source Ref */
+            source_ref?: string | null;
+            /** Storage Key */
+            storage_key: string;
+            /**
+             * Upload Status
+             * @default complete
+             * @enum {string}
+             */
+            upload_status: "pending" | "complete";
+            /** Validation Notes */
+            validation_notes?: string[];
+        };
         /**
          * ArtifactKind
          * @enum {string}
          */
         ArtifactKind: "dataset" | "model" | "notebook" | "source" | "manifest";
+        /** ArtifactMapping */
+        ArtifactMapping: {
+            /** Dataset Artifact Id */
+            dataset_artifact_id?: string | null;
+            /** Entity Column */
+            entity_column?: string | null;
+            /** Model Artifact Id */
+            model_artifact_id?: string | null;
+            /** Notebook Artifact Id */
+            notebook_artifact_id?: string | null;
+            reported_metric_source?: components["schemas"]["ReportedMetricSource"] | null;
+            /** Split Column */
+            split_column?: string | null;
+            /** Target Column */
+            target_column?: string | null;
+            /** Time Column */
+            time_column?: string | null;
+        };
+        /** AuditEvent */
+        AuditEvent: {
+            actor: components["schemas"]["Actor"];
+            /** Audit Id */
+            audit_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Event Id */
+            event_id: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Provenance Refs */
+            provenance_refs?: string[];
+            /** Sequence */
+            sequence: number;
+            type: components["schemas"]["EventType"];
+        };
         /**
          * AuditMode
          * @enum {string}
          */
         AuditMode: "complete_audit" | "dataset_preflight";
+        /** AuditReport */
+        AuditReport: {
+            /**
+             * Audience
+             * @enum {string}
+             */
+            audience: "technical" | "executive";
+            /** Audit Id */
+            audit_id: string;
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /**
+             * Format
+             * @default markdown
+             * @constant
+             */
+            format: "markdown";
+            /** Report Id */
+            report_id: string;
+        };
+        /** AuditResponse */
+        AuditResponse: {
+            /** Audit Id */
+            audit_id: string;
+            /**
+             * Checkpoint
+             * @default created
+             */
+            checkpoint: string;
+            /** Correction Ids */
+            correction_ids?: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Events Url */
+            events_url: string;
+            /** Evidence Ids */
+            evidence_ids?: string[];
+            /** Finding Ids */
+            finding_ids?: string[];
+            /** Findings */
+            findings: components["schemas"]["Finding"][];
+            /** Hypothesis Ids */
+            hypothesis_ids?: string[];
+            /**
+             * Last Event Sequence
+             * @default 0
+             */
+            last_event_sequence: number;
+            /** Lease Expires At */
+            lease_expires_at?: string | null;
+            /** Lease Owner */
+            lease_owner?: string | null;
+            metric_comparison?: components["schemas"]["MetricComparison"] | null;
+            mode: components["schemas"]["AuditMode"];
+            /** Open Questions */
+            open_questions: components["schemas"]["Question"][];
+            /** Project Id */
+            project_id: string;
+            provenance?: components["schemas"]["Provenance"];
+            /** Question Ids */
+            question_ids?: string[];
+            reproduction_tier?: components["schemas"]["ReproductionTier"] | null;
+            /** Scenario Revision */
+            scenario_revision: number;
+            /** Session Id */
+            session_id: string;
+            status: components["schemas"]["AuditStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at?: string;
+            verdict?: components["schemas"]["Verdict"] | null;
+        };
+        /**
+         * AuditStatus
+         * @enum {string}
+         */
+        AuditStatus: "validating" | "queued" | "reconstructing" | "reproducing" | "interrogating" | "waiting_for_user" | "probing" | "correcting" | "composing" | "complete" | "failed_partial" | "failed";
+        /** BenchmarkDefinition */
+        BenchmarkDefinition: {
+            /** Artifact Hashes */
+            artifact_hashes: {
+                [key: string]: string;
+            };
+            /** Artifact Manifest */
+            artifact_manifest: {
+                [key: string]: string;
+            };
+            /** Benchmark Id */
+            benchmark_id: string;
+            /** Description */
+            description: string;
+            /** Expectations */
+            expectations: components["schemas"]["BenchmarkExpectation"][];
+            /** Expected Corrected Metric */
+            expected_corrected_metric?: number | null;
+            /** Fixture */
+            fixture: boolean;
+            /** License Name */
+            license_name: string;
+            /** License Url */
+            license_url?: string | null;
+            /** Metric Tolerance */
+            metric_tolerance: number;
+            /** Name */
+            name: string;
+            /** Prohibited Claims */
+            prohibited_claims: string[];
+            scenario: components["schemas"]["Scenario"];
+            /** Source Url */
+            source_url?: string | null;
+            /** Version */
+            version: string;
+        };
+        /** BenchmarkExpectation */
+        BenchmarkExpectation: {
+            expected_status: components["schemas"]["FindingStatus"];
+            /** Feature */
+            feature: string;
+            mechanism: components["schemas"]["FindingMechanism"];
+        };
         /** BenchmarkProjectRequest */
         BenchmarkProjectRequest: {
             /** Benchmark Id */
@@ -295,12 +620,92 @@ export interface components {
             /** Artifact Ids */
             artifact_ids: string[];
         };
+        /** ComputeExecutionProvenance */
+        ComputeExecutionProvenance: {
+            /** Cpu Limit Seconds */
+            cpu_limit_seconds: number;
+            /** File Descriptor Limit */
+            file_descriptor_limit: number;
+            /**
+             * Harness Version
+             * @default compute-v1
+             */
+            harness_version: string;
+            /** Memory Limit Bytes */
+            memory_limit_bytes: number;
+            /**
+             * Mode
+             * @default bounded_subprocess
+             * @constant
+             */
+            mode: "bounded_subprocess";
+            /**
+             * Sandboxed
+             * @default false
+             * @constant
+             */
+            sandboxed: false;
+            /** Test Negative */
+            test_negative: number;
+            /** Test Positive */
+            test_positive: number;
+            /** Test Rows */
+            test_rows: number;
+            /** Train Rows */
+            train_rows: number;
+            /** Wall Timeout Seconds */
+            wall_timeout_seconds: number;
+        };
         /** CreateProjectRequest */
         CreateProjectRequest: {
             /** Name */
             name: string;
             source: components["schemas"]["SourceInput"];
         };
+        /**
+         * EventType
+         * @enum {string}
+         */
+        EventType: "audit_state" | "assumption" | "question" | "answer" | "hypothesis" | "tool_started" | "tool_result" | "evidence" | "correction" | "finding_changed" | "reasoning_summary" | "warning" | "retry" | "error" | "verdict";
+        /** FeatureContext */
+        FeatureContext: {
+            /** Description */
+            description: string;
+            /** Source Refs */
+            source_refs?: string[];
+        };
+        /** Finding */
+        Finding: {
+            /** Conclusion */
+            conclusion: string;
+            /** Confidence */
+            confidence: number;
+            /** Correction Id */
+            correction_id?: string | null;
+            /** Evidence Ids */
+            evidence_ids?: string[];
+            /** Features */
+            features: string[];
+            /** Finding Id */
+            finding_id: string;
+            /** Hypothesis Ids */
+            hypothesis_ids?: string[];
+            mechanism: components["schemas"]["FindingMechanism"];
+            severity: components["schemas"]["Severity"];
+            status: components["schemas"]["FindingStatus"];
+            /** What Would Change This */
+            what_would_change_this: string;
+        };
+        /**
+         * FindingMechanism
+         * @enum {string}
+         */
+        FindingMechanism: "post_outcome" | "target_proxy" | "split_contamination" | "group_contamination" | "temporal" | "preprocessing" | "metric_mismatch" | "other";
+        /**
+         * FindingStatus
+         * @enum {string}
+         */
+        FindingStatus: "needs_context" | "suspected" | "tested" | "confirmed" | "cleared" | "inconclusive";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -324,10 +729,197 @@ export interface components {
             /** Time Column */
             time_column?: string | null;
         };
+        /** MetricComparison */
+        MetricComparison: {
+            corrected?: components["schemas"]["MetricValue"] | null;
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "roc_auc" | "accuracy" | "f1";
+            reported?: components["schemas"]["MetricValue"] | null;
+            reproduced?: components["schemas"]["MetricValue"] | null;
+            /**
+             * Reproduction Status
+             * @enum {string}
+             */
+            reproduction_status: "within_tolerance" | "outside_tolerance" | "unavailable" | "not_claimed";
+        };
+        /** MetricValue */
+        MetricValue: {
+            /** Protocol Id */
+            protocol_id: string;
+            /** Provenance */
+            provenance: string;
+            /** Reproduction Tier */
+            reproduction_tier: components["schemas"]["ReproductionTier"] | "reported_claim";
+            /** Tolerance */
+            tolerance?: number | null;
+            /** Value */
+            value: number;
+        };
         /** PresignRequest */
         PresignRequest: {
             /** Artifacts */
             artifacts: components["schemas"]["UploadArtifactInput"][];
+        };
+        /** ProjectResponse */
+        ProjectResponse: {
+            /** Artifact Ids */
+            artifact_ids?: string[];
+            /** Artifacts */
+            artifacts: components["schemas"]["Artifact"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Feature Context */
+            feature_context?: {
+                [key: string]: components["schemas"]["FeatureContext"];
+            };
+            mapping?: components["schemas"]["ArtifactMapping"];
+            /** Name */
+            name: string;
+            /** Project Id */
+            project_id: string;
+            /** Scenarios */
+            scenarios?: components["schemas"]["Scenario"][];
+            /** Session Id */
+            session_id: string;
+            source: components["schemas"]["ProjectSource"];
+            status: components["schemas"]["ProjectStatus"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at?: string;
+            /** Warnings */
+            warnings?: string[];
+        };
+        /** ProjectSource */
+        ProjectSource: {
+            /** Benchmark Id */
+            benchmark_id?: string | null;
+            /** Repository Url */
+            repository_url?: string | null;
+            /** Requested Ref */
+            requested_ref?: string | null;
+            /** Resolved Commit */
+            resolved_commit?: string | null;
+            type: components["schemas"]["SourceType"];
+        };
+        /**
+         * ProjectStatus
+         * @enum {string}
+         */
+        ProjectStatus: "importing" | "ready_for_upload" | "validating" | "ready_for_mapping" | "ready" | "preflight_only" | "rejected";
+        /** Provenance */
+        Provenance: {
+            agent_execution?: components["schemas"]["AgentExecutionProvenance"] | null;
+            /**
+             * Agent Model
+             * @default gpt-5.6-sol
+             */
+            agent_model: string;
+            /** Artifact Hashes */
+            artifact_hashes?: string[];
+            compute_execution?: components["schemas"]["ComputeExecutionProvenance"] | null;
+            /**
+             * Evaluator Version
+             * @default 0.2.0
+             */
+            evaluator_version: string;
+            /** Feature Order */
+            feature_order?: string[];
+            /** Package Versions */
+            package_versions?: {
+                [key: string]: string;
+            };
+            /**
+             * Prompt Schema Version
+             * @default audit-v2
+             */
+            prompt_schema_version: string;
+            /**
+             * Random Seed
+             * @default 42
+             */
+            random_seed: number;
+            /** Source Commit */
+            source_commit?: string | null;
+            /** Split Hash */
+            split_hash?: string | null;
+        };
+        /** Question */
+        Question: {
+            /** Affected Hypothesis Ids */
+            affected_hypothesis_ids: string[];
+            /** Answer */
+            answer?: string | null;
+            /**
+             * Answer Type
+             * @enum {string}
+             */
+            answer_type: "single_choice" | "free_text";
+            /** Answered At */
+            answered_at?: string | null;
+            /** Audit Id */
+            audit_id: string;
+            /** Blocking */
+            blocking: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Options */
+            options?: string[];
+            /** Question Id */
+            question_id: string;
+            /**
+             * Status
+             * @default open
+             * @enum {string}
+             */
+            status: "open" | "answered";
+            /** Text */
+            text: string;
+            /** Why It Matters */
+            why_it_matters: string;
+        };
+        /** RepairBundleResponse */
+        RepairBundleResponse: {
+            /** Audit Id */
+            audit_id: string;
+            /** Bundle Id */
+            bundle_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Download Url */
+            download_url?: string | null;
+            /** File Hashes */
+            file_hashes?: {
+                [key: string]: string;
+            };
+            /** Limitations */
+            limitations?: string[];
+            /** Project Id */
+            project_id: string;
+            /** Sha256 */
+            sha256?: string | null;
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "unavailable";
+            /** Storage Key */
+            storage_key?: string | null;
         };
         /** ReportRequest */
         ReportRequest: {
@@ -349,6 +941,46 @@ export interface components {
             artifact_id: string;
             /** Location */
             location: string;
+        };
+        /**
+         * ReproductionTier
+         * @enum {string}
+         */
+        ReproductionTier: "exact_supported" | "controlled_reconstruction" | "reference_challenger" | "static_only";
+        /** Scenario */
+        Scenario: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at?: string;
+            /** Decision Time */
+            decision_time: string;
+            /**
+             * Intended Metric
+             * @enum {string}
+             */
+            intended_metric: "roc_auc" | "accuracy" | "f1";
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Positive Label
+             * @default 1
+             */
+            positive_label: string;
+            /** Prediction Horizon */
+            prediction_horizon: string;
+            /** Revision */
+            revision: number;
+            /** Row Entity */
+            row_entity: string;
+            /** Split Unit */
+            split_unit: string;
+            /** Target Definition */
+            target_definition: string;
         };
         /** ScenarioRequest */
         ScenarioRequest: {
@@ -388,6 +1020,25 @@ export interface components {
             /** Target Definition */
             target_definition: string;
         };
+        /** SessionResponse */
+        SessionResponse: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Limits */
+            limits: {
+                [key: string]: number;
+            };
+        };
+        /**
+         * Severity
+         * @enum {string}
+         */
+        Severity: "critical" | "high" | "medium" | "low" | "info";
         /** SourceInput */
         SourceInput: {
             /**
@@ -403,6 +1054,11 @@ export interface components {
              */
             type: "github" | "upload";
         };
+        /**
+         * SourceType
+         * @enum {string}
+         */
+        SourceType: "github" | "upload" | "benchmark";
         /** StartAuditRequest */
         StartAuditRequest: {
             mode: components["schemas"]["AuditMode"];
@@ -411,6 +1067,55 @@ export interface components {
             /** Scenario Revision */
             scenario_revision: number;
         };
+        /** SuccessEnvelope[AuditReport] */
+        SuccessEnvelope_AuditReport_: {
+            data: components["schemas"]["AuditReport"];
+            /** Error */
+            error?: null;
+        };
+        /** SuccessEnvelope[AuditResponse] */
+        SuccessEnvelope_AuditResponse_: {
+            data: components["schemas"]["AuditResponse"];
+            /** Error */
+            error?: null;
+        };
+        /** SuccessEnvelope[ProjectResponse] */
+        SuccessEnvelope_ProjectResponse_: {
+            data: components["schemas"]["ProjectResponse"];
+            /** Error */
+            error?: null;
+        };
+        /** SuccessEnvelope[RepairBundleResponse] */
+        SuccessEnvelope_RepairBundleResponse_: {
+            data: components["schemas"]["RepairBundleResponse"];
+            /** Error */
+            error?: null;
+        };
+        /** SuccessEnvelope[SessionResponse] */
+        SuccessEnvelope_SessionResponse_: {
+            data: components["schemas"]["SessionResponse"];
+            /** Error */
+            error?: null;
+        };
+        /** SuccessEnvelope[list[AuditEvent]] */
+        SuccessEnvelope_list_AuditEvent__: {
+            /** Data */
+            data: components["schemas"]["AuditEvent"][];
+            /** Error */
+            error?: null;
+        };
+        /** SuccessEnvelope[list[BenchmarkDefinition]] */
+        SuccessEnvelope_list_BenchmarkDefinition__: {
+            /** Data */
+            data: components["schemas"]["BenchmarkDefinition"][];
+            /** Error */
+            error?: null;
+        };
+        /**
+         * TrustState
+         * @enum {string}
+         */
+        TrustState: "materially_inflated" | "partially_supported" | "supported" | "inconclusive";
         /** UploadArtifactInput */
         UploadArtifactInput: {
             /** Client Id */
@@ -437,6 +1142,29 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** Verdict */
+        Verdict: {
+            /** Finding Counts */
+            finding_counts: {
+                [key: string]: number;
+            };
+            /** Summary */
+            summary: string;
+            trust_state: components["schemas"]["TrustState"];
+            /** Unsupported Checks */
+            unsupported_checks?: string[];
+        };
+        /** VersionResponse */
+        VersionResponse: {
+            /** Api Version */
+            api_version: string;
+            /** Build Sha */
+            build_sha: string;
+            /** Evaluator Version */
+            evaluator_version: string;
+            /** Release Version */
+            release_version: string;
         };
     };
     responses: never;
@@ -469,9 +1197,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_AuditResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -504,9 +1230,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_AuditResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -544,9 +1268,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_AuditResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -582,8 +1304,73 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SuccessEnvelope_list_AuditEvent__"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_repair_bundle_api_v1_audits__audit_id__repair_bundle_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                audit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuccessEnvelope_RepairBundleResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_repair_bundle_api_v1_audits__audit_id__repair_bundle__bundle_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                bundle_id: string;
+                audit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -619,9 +1406,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_AuditReport_"];
                 };
             };
             /** @description Validation Error */
@@ -652,9 +1437,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_list_BenchmarkDefinition__"];
                 };
             };
             /** @description Validation Error */
@@ -689,9 +1472,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_ProjectResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -726,9 +1507,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_ProjectResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -761,9 +1540,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_ProjectResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -831,9 +1608,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_ProjectResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -941,9 +1716,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_ProjectResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -980,9 +1753,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_ProjectResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -1011,9 +1782,27 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessEnvelope_SessionResponse_"];
+                };
+            };
+        };
+    };
+    version_version_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionResponse"];
                 };
             };
         };

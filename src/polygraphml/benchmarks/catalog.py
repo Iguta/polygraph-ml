@@ -20,6 +20,7 @@ from polygraphml.domain.models import (
     ArtifactMapping,
     BenchmarkDefinition,
     BenchmarkExpectation,
+    FeatureContext,
     FindingMechanism,
     FindingStatus,
     Project,
@@ -36,6 +37,16 @@ SYNTHETIC_BENCHMARK_ID = "synthetic_campaign_leak_v1"
 POST_OUTCOME_BENCHMARK_ID = "synthetic_post_outcome_only_v1"
 GROUP_CONTAMINATION_BENCHMARK_ID = "synthetic_group_contamination_only_v1"
 COVID_BENCHMARK_ID = "uci_covid_surveillance_clean_v1"
+UCI_BANK_BENCHMARK_ID = "uci_bank_marketing_duration_v1"
+TARGET_PROXY_BENCHMARK_ID = "synthetic_semantic_proxy_v1"
+HARD_NEGATIVE_BENCHMARK_ID = "synthetic_suspicious_hard_negative_v1"
+UCI_BANK_SOURCE = "https://archive.ics.uci.edu/dataset/222/bank%2Bmarketing"
+UCI_BANK_ARTIFACT_HASHES = {
+    "bank_marketing_evaluation.csv": "060671f9dcf10dbf76cda0dec39e8ab1b9c0787c4b93e31f1ca7fab95c508b39",
+    "bank_marketing_model.skops": "5c23908310184d18ce20f5a40cd2f16e19455ff7c9029d5fa86268b0e3ac8d90",
+    "bank_marketing_evaluation.ipynb": "365fac335a5e0b430ab42e591da7660713f1979b680bdc5451132c116d782af1",
+    "derivation.txt": "61563a20dec3f395d2c57c9c673bdb744b71fc5f453c4d121a4f69b181c09d34",
+}
 COVID_SOURCE = """A01,A02,A03,A04,A05,A06,A07,Categories
 +,+,+,+,+,-,-,PUS
 +,+,-,+,+,-,-,PUS
@@ -57,9 +68,12 @@ COVID_SOURCE = """A01,A02,A03,A04,A05,A06,A07,Categories
 class BenchmarkCatalog:
     def definitions(self) -> list[BenchmarkDefinition]:
         return [
+            self._uci_bank_definition(),
             self._definition(),
             self._definition(POST_OUTCOME_BENCHMARK_ID),
             self._definition(GROUP_CONTAMINATION_BENCHMARK_ID),
+            self._definition(TARGET_PROXY_BENCHMARK_ID),
+            self._definition(HARD_NEGATIVE_BENCHMARK_ID),
             self._covid_definition(),
         ]
 
@@ -68,8 +82,12 @@ class BenchmarkCatalog:
             SYNTHETIC_BENCHMARK_ID,
             POST_OUTCOME_BENCHMARK_ID,
             GROUP_CONTAMINATION_BENCHMARK_ID,
+            TARGET_PROXY_BENCHMARK_ID,
+            HARD_NEGATIVE_BENCHMARK_ID,
         }:
             return self._definition(benchmark_id)
+        if benchmark_id == UCI_BANK_BENCHMARK_ID:
+            return self._uci_bank_definition()
         if benchmark_id == COVID_BENCHMARK_ID:
             return self._covid_definition()
         raise PolygraphError("INVALID_REQUEST", "Benchmark was not found.", status_code=404)
@@ -84,6 +102,8 @@ class BenchmarkCatalog:
         definition = self.get(benchmark_id)
         if benchmark_id == COVID_BENCHMARK_ID:
             return self._materialize_covid(project_id, session_id, store)
+        if benchmark_id == UCI_BANK_BENCHMARK_ID:
+            return self._materialize_uci_bank(project_id, session_id, store)
         rng = np.random.default_rng(42)
         rows = 600
         monthly_spend = rng.normal(75, 18, rows).clip(15, 160)
@@ -96,7 +116,15 @@ class BenchmarkCatalog:
             + rng.normal(0, 1.0, rows)
         )
         target = (latent > np.quantile(latent, 0.58)).astype(int)
-        call_duration = 95 + 240 * target + rng.normal(0, 20, rows)
+        if benchmark_id == TARGET_PROXY_BENCHMARK_ID:
+            semantic_feature = "engagement_band"
+            semantic_values = target.copy()
+        elif benchmark_id == HARD_NEGATIVE_BENCHMARK_ID:
+            semantic_feature = "previous_call_duration"
+            semantic_values = 125 + 35 * latent + rng.normal(0, 25, rows)
+        else:
+            semantic_feature = "call_duration"
+            semantic_values = 95 + 240 * target + rng.normal(0, 20, rows)
         indices = rng.permutation(rows)
         split = np.full(rows, "train", dtype=object)
         split[indices[int(rows * 0.72) :]] = "test"
@@ -107,12 +135,12 @@ class BenchmarkCatalog:
                 "monthly_spend": monthly_spend.round(2),
                 "tenure_months": tenure_months,
                 "support_tickets": support_tickets,
-                "call_duration": call_duration.round(1),
+                semantic_feature: np.asarray(semantic_values).round(1),
                 "churned": target,
                 "split": split,
             }
         )
-        features = ["monthly_spend", "tenure_months", "support_tickets", "call_duration"]
+        features = ["monthly_spend", "tenure_months", "support_tickets", semantic_feature]
         train = frame["split"] == "train"
         test = frame["split"] == "test"
         model = LogisticRegression(max_iter=1000, random_state=42)
@@ -140,7 +168,7 @@ class BenchmarkCatalog:
                 ),
                 new_code_cell(
                     "features = ['monthly_spend', 'tenure_months', "
-                    "'support_tickets', 'call_duration']\n"
+                    f"'support_tickets', '{semantic_feature}']\n"
                     "train = df['split'] == 'train'\n"
                     "test = df['split'] == 'test'\n"
                     "model = LogisticRegression(max_iter=1000, random_state=42)\n"
@@ -224,6 +252,88 @@ class BenchmarkCatalog:
                 ),
             ),
             scenarios=[definition.scenario],
+            feature_context={
+                semantic_feature: FeatureContext(
+                    description=(
+                        "An engagement segment code included in the submitted evaluation table."
+                        if benchmark_id == TARGET_PROXY_BENCHMARK_ID
+                        else "Duration of a completed previous campaign call."
+                        if benchmark_id == HARD_NEGATIVE_BENCHMARK_ID
+                        else "Duration of the current campaign call."
+                    ),
+                    source_refs=[f"benchmark:{benchmark_id}/data-dictionary"],
+                )
+            },
+        )
+        return project, artifacts
+
+    def _materialize_uci_bank(
+        self,
+        project_id: str,
+        session_id: str,
+        store: ArtifactStore,
+    ) -> tuple[Project, list[Artifact]]:
+        definition = self._uci_bank_definition()
+        source_root = Path(__file__).parent / "data" / "uci_bank"
+        specifications = (
+            ("bank_marketing_evaluation.csv", ArtifactKind.DATASET, "csv"),
+            ("bank_marketing_model.skops", ArtifactKind.MODEL, "skops"),
+            ("bank_marketing_evaluation.ipynb", ArtifactKind.NOTEBOOK, "ipynb-static"),
+            ("derivation.txt", ArtifactKind.SOURCE, "static-source"),
+        )
+        artifacts: list[Artifact] = []
+        for filename, kind, adapter in specifications:
+            source_path = source_root / filename
+            content = source_path.read_bytes()
+            digest = hashlib.sha256(content).hexdigest()
+            if digest != UCI_BANK_ARTIFACT_HASHES[filename]:
+                raise PolygraphError(
+                    "INVALID_ARTIFACT", "Pinned UCI Bank benchmark artifact hash changed."
+                )
+            storage_key = f"{project_id}/benchmark/{filename}"
+            store.write(storage_key, content, 100 * 1024 * 1024)
+            artifacts.append(
+                self._artifact(
+                    project_id,
+                    source_path,
+                    storage_key,
+                    UCI_BANK_BENCHMARK_ID,
+                    kind,
+                    adapter,
+                    AdapterStatus.SUPPORTED,
+                )
+            )
+        by_kind = {artifact.kind: artifact for artifact in artifacts}
+        project = Project(
+            project_id=project_id,
+            session_id=session_id,
+            name=definition.name,
+            source=ProjectSource(type=SourceType.BENCHMARK, benchmark_id=UCI_BANK_BENCHMARK_ID),
+            status=ProjectStatus.READY,
+            artifact_ids=[artifact.artifact_id for artifact in artifacts],
+            mapping=ArtifactMapping(
+                dataset_artifact_id=by_kind[ArtifactKind.DATASET].artifact_id,
+                model_artifact_id=by_kind[ArtifactKind.MODEL].artifact_id,
+                notebook_artifact_id=by_kind[ArtifactKind.NOTEBOOK].artifact_id,
+                target_column="subscribed",
+                entity_column="row_id",
+                split_column="split",
+                reported_metric_source=ReportedMetricSource(
+                    artifact_id=by_kind[ArtifactKind.NOTEBOOK].artifact_id,
+                    location="bank_marketing_evaluation.ipynb#cell=3",
+                ),
+            ),
+            scenarios=[definition.scenario],
+            feature_context={
+                "duration": FeatureContext(
+                    description="Duration in seconds of the current campaign's last contact",
+                    source_refs=[f"{UCI_BANK_SOURCE}#Additional-Variable-Information"],
+                ),
+                "poutcome": FeatureContext(
+                    description="Outcome of the previous marketing campaign",
+                    source_refs=[f"{UCI_BANK_SOURCE}#Additional-Variable-Information"],
+                ),
+            },
         )
         return project, artifacts
 
@@ -385,12 +495,22 @@ class BenchmarkCatalog:
     def _definition(
         benchmark_id: str = SYNTHETIC_BENCHMARK_ID,
     ) -> BenchmarkDefinition:
-        includes_post_outcome = benchmark_id != GROUP_CONTAMINATION_BENCHMARK_ID
-        includes_group_contamination = benchmark_id != POST_OUTCOME_BENCHMARK_ID
+        includes_post_outcome = benchmark_id not in {
+            GROUP_CONTAMINATION_BENCHMARK_ID,
+            TARGET_PROXY_BENCHMARK_ID,
+            HARD_NEGATIVE_BENCHMARK_ID,
+        }
+        includes_group_contamination = benchmark_id not in {
+            POST_OUTCOME_BENCHMARK_ID,
+            TARGET_PROXY_BENCHMARK_ID,
+            HARD_NEGATIVE_BENCHMARK_ID,
+        }
         names = {
             SYNTHETIC_BENCHMARK_ID: "Campaign timing leak",
             POST_OUTCOME_BENCHMARK_ID: "Post-outcome feature only",
             GROUP_CONTAMINATION_BENCHMARK_ID: "Group contamination only",
+            TARGET_PROXY_BENCHMARK_ID: "Semantic target-proxy",
+            HARD_NEGATIVE_BENCHMARK_ID: "Suspicious-looking hard negative",
         }
         expectations = []
         if includes_post_outcome:
@@ -409,6 +529,14 @@ class BenchmarkCatalog:
                     expected_status=FindingStatus.CONFIRMED,
                 )
             )
+        if benchmark_id == TARGET_PROXY_BENCHMARK_ID:
+            expectations.append(
+                BenchmarkExpectation(
+                    mechanism=FindingMechanism.TARGET_PROXY,
+                    feature="engagement_band",
+                    expected_status=FindingStatus.CONFIRMED,
+                )
+            )
         return BenchmarkDefinition(
             benchmark_id=benchmark_id,
             name=names[benchmark_id],
@@ -424,7 +552,9 @@ class BenchmarkCatalog:
                 ArtifactKind.NOTEBOOK: "training.ipynb",
             },
             artifact_hashes={
-                "generation_spec_sha256": hashlib.sha256(b"campaign-leak-v1-seed-42").hexdigest()
+                "generation_spec_sha256": hashlib.sha256(
+                    f"{benchmark_id}-seed-42".encode()
+                ).hexdigest()
             },
             scenario=Scenario(
                 revision=1,
@@ -435,16 +565,78 @@ class BenchmarkCatalog:
                 split_unit=("household_id" if includes_group_contamination else "customer_id"),
                 intended_metric="roc_auc",
                 positive_label="1",
-                notes="Call-duration availability must be confirmed by the user.",
+                notes=(
+                    "The engagement-band provenance must be confirmed by the user."
+                    if benchmark_id == TARGET_PROXY_BENCHMARK_ID
+                    else "Previous-call duration is fixed before the current decision."
+                    if benchmark_id == HARD_NEGATIVE_BENCHMARK_ID
+                    else "Call-duration availability must be confirmed by the user."
+                ),
             ),
             expectations=expectations,
             metric_tolerance=0.005,
-            expected_corrected_metric=(0.8627956989247312 if includes_post_outcome else None),
+            expected_corrected_metric=(
+                0.8145254629629629
+                if benchmark_id == TARGET_PROXY_BENCHMARK_ID
+                else 0.8627956989247312
+                if includes_post_outcome
+                else None
+            ),
             prohibited_claims=[
                 "This synthetic benchmark proves performance on a real campaign.",
                 "The corrected score guarantees production performance.",
             ],
             fixture=True,
+        )
+
+    @staticmethod
+    def _uci_bank_definition() -> BenchmarkDefinition:
+        return BenchmarkDefinition(
+            benchmark_id=UCI_BANK_BENCHMARK_ID,
+            name="UCI Bank Marketing current-call duration",
+            description=(
+                "Pinned full public UCI Bank Marketing dataset, trained model, and notebook. "
+                "The declared use case scores a client before the current call begins."
+            ),
+            source_url=HttpUrl(UCI_BANK_SOURCE),
+            license_name="CC BY 4.0",
+            license_url=HttpUrl("https://creativecommons.org/licenses/by/4.0/"),
+            version="uci-2012+polygraphml-1.0.0",
+            artifact_manifest={
+                ArtifactKind.DATASET: "bank_marketing_evaluation.csv",
+                ArtifactKind.MODEL: "bank_marketing_model.skops",
+                ArtifactKind.NOTEBOOK: "bank_marketing_evaluation.ipynb",
+                ArtifactKind.SOURCE: "derivation.txt",
+            },
+            artifact_hashes=UCI_BANK_ARTIFACT_HASHES,
+            scenario=Scenario(
+                revision=1,
+                target_definition="Whether the client subscribes to a term deposit",
+                row_entity="One client contact in a direct-marketing campaign",
+                decision_time="Before the current marketing call begins",
+                prediction_horizon="Response to the current marketing contact",
+                split_unit="row_id",
+                intended_metric="roc_auc",
+                positive_label="1",
+                notes=(
+                    "UCI Bank Marketing, DOI 10.24432/C5K306; all 45,211 source rows are "
+                    "retained in the deterministic derived evaluation table."
+                ),
+            ),
+            expectations=[
+                BenchmarkExpectation(
+                    mechanism=FindingMechanism.POST_OUTCOME,
+                    feature="duration",
+                    expected_status=FindingStatus.CONFIRMED,
+                )
+            ],
+            metric_tolerance=0.005,
+            expected_corrected_metric=0.7330845871361364,
+            prohibited_claims=[
+                "The corrected score proves future production performance.",
+                "Current-call duration is available before the call begins.",
+            ],
+            fixture=False,
         )
 
     @staticmethod

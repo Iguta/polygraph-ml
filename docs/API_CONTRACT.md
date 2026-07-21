@@ -1,6 +1,6 @@
 # API Contract — PolygraphML
 
-**Version:** 1.1 · **Base URL:** `/api/v1` · **Format:** JSON over HTTPS unless noted
+**Version:** 1.2 · **Base URL:** `/api/v1` · **Format:** JSON over HTTPS unless noted
 
 ## 1. Conventions
 
@@ -31,7 +31,20 @@ Failed responses use:
 - Anonymous demo sessions use a short-lived bearer token and strict rate/cost quotas; there are no end-user accounts in the MVP.
 - Artifact bytes travel directly between the browser and S3 using scoped presigned URLs.
 
-Core errors: `INVALID_REQUEST`, `RATE_LIMITED`, `PROJECT_NOT_FOUND`, `INVALID_REPOSITORY`, `INVALID_ARTIFACT`, `UNSAFE_ARTIFACT`, `ARTIFACT_TOO_LARGE`, `MAPPING_INCOMPLETE`, `SCENARIO_INCOMPLETE`, `AUDIT_NOT_FOUND`, `AUDIT_NOT_RESUMABLE`, `QUESTION_NOT_FOUND`, `MODEL_OUTPUT_INVALID`, `PROBE_TIMEOUT`, `EXECUTION_UNSUPPORTED`, `INTERNAL`.
+Core errors: `INVALID_REQUEST`, `RATE_LIMITED`, `PROJECT_NOT_FOUND`, `INVALID_REPOSITORY`, `INVALID_ARTIFACT`, `UNSAFE_ARTIFACT`, `ARTIFACT_TOO_LARGE`, `MAPPING_INCOMPLETE`, `SCENARIO_INCOMPLETE`, `AUDIT_NOT_FOUND`, `AUDIT_NOT_RESUMABLE`, `QUESTION_NOT_FOUND`, `REPAIR_NOT_FOUND`, `MODEL_OUTPUT_INVALID`, `PROBE_TIMEOUT`, `EXECUTION_UNSUPPORTED`, `INTERNAL`.
+
+### `GET /version`
+
+Public build metadata outside the versioned API prefix:
+
+```json
+{
+  "api_version": "1.2",
+  "release_version": "0.2.0",
+  "build_sha": "40-character-git-sha",
+  "evaluator_version": "0.2.0"
+}
+```
 
 ## 2. Sessions and benchmarks
 
@@ -58,7 +71,7 @@ Lists curated benchmark projects with pinned versions, licenses, expected audit 
 
 ### `POST /projects/from-benchmark`
 
-Body: `{ "benchmark_id": "benchmark_bank_marketing_v1" }`.
+Body: `{ "benchmark_id": "uci_bank_marketing_duration_v1" }`.
 
 Creates an ordinary project from immutable benchmark artifacts so all later endpoints are identical to a user submission.
 
@@ -109,6 +122,8 @@ Creates a project from either a public GitHub repository or an upload session.
 ```
 
 The import must resolve a mutable ref to a commit SHA before the project becomes `ready_for_mapping`. The MVP accepts public repositories only.
+
+If the repository root contains `.polygraphml.yml`, the importer validates schema version `1`, normalizes every declared relative path, enforces the artifact allowlist, requires one exact lowercase SHA-256 per declared artifact, rejects undeclared hashes, and fetches only those files. The manifest contains mapping, scenario, feature descriptions, source/license references, and hashes; it must not contain expected findings or verdicts. Without a manifest, bounded discovery is limited to 5,000 tree entries and 150 MiB of imported files.
 
 ### `POST /projects/{project_id}/artifacts/presign`
 
@@ -240,9 +255,35 @@ Statuses:
     "provenance": {
       "source_commit": "40-char-sha",
       "artifact_hashes": ["sha256:..."],
-      "evaluator_version": "0.1.0",
+      "evaluator_version": "0.2.0",
       "agent_model": "gpt-5.6-sol",
-      "prompt_schema_version": "audit-v1"
+      "prompt_schema_version": "audit-v2",
+      "agent_execution": {
+        "provider": "openai",
+        "mode": "live",
+        "requested_model": "gpt-5.6-sol",
+        "resolved_model": "gpt-5.6-sol",
+        "reasoning_effort": "high",
+        "harness_version": "audit-v2",
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+        "latency_ms": 0,
+        "trace_id": "trace_..."
+      },
+      "compute_execution": {
+        "mode": "bounded_subprocess",
+        "harness_version": "compute-v1",
+        "sandboxed": false,
+        "wall_timeout_seconds": 120,
+        "cpu_limit_seconds": 90,
+        "memory_limit_bytes": 2147483648,
+        "file_descriptor_limit": 64,
+        "train_rows": 32551,
+        "test_rows": 12660,
+        "test_positive": 1481,
+        "test_negative": 11179
+      }
     }
   },
   "error": null
@@ -298,7 +339,35 @@ Answers the current material question and enqueues a resume operation.
 
 Body: `{ "audience": "technical" | "executive", "format": "markdown" }`.
 
-**202** for generation or **200** if the immutable report already exists. The final report resource provides a scoped download URL. PDF is optional; email delivery is not part of the MVP contract.
+**200** returns the immutable generated report; repeating the same audience returns the existing record. The response contains Markdown content for client-side download. PDF and email are not part of the MVP contract.
+
+### `POST /audits/{audit_id}/repair-bundle`
+
+For a completed audit with a deterministic feature-removal correction, attempts to patch one unique literal notebook `features` assignment. It never executes the notebook. The response is idempotent and returns either a hash-addressed bundle or an explicit limitation:
+
+```json
+{
+  "data": {
+    "bundle_id": "rpb_01...",
+    "audit_id": "aud_01...",
+    "project_id": "prj_01...",
+    "status": "available",
+    "sha256": "hex-sha256",
+    "size_bytes": 2048,
+    "file_hashes": {
+      "README.md": "hex-sha256",
+      "correction.json": "hex-sha256",
+      "feature-list.patch": "hex-sha256",
+      "protocol.json": "hex-sha256"
+    },
+    "limitations": ["Submitted notebook code was not executed."],
+    "download_url": "short-lived-or-authenticated-url"
+  },
+  "error": null
+}
+```
+
+`status` is `available` or `unavailable`. Dynamic or ambiguous source yields `unavailable`; the service never invents a patch. S3 URLs expire after 15 minutes. Local mode uses the authenticated bundle download endpoint.
 
 ## 5. Core schemas
 
@@ -431,7 +500,6 @@ Body: `{ "audience": "technical" | "executive", "format": "markdown" }`.
 {
   "trust_state": "materially_inflated | partially_supported | supported | inconclusive",
   "summary": "The reported score is reproducible under the submitted split but materially inflated for the stated decision scenario.",
-  "metric_comparison_id": "met_01...",
   "finding_counts": {
     "confirmed": 1,
     "cleared": 5,

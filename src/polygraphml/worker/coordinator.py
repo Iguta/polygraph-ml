@@ -11,15 +11,18 @@ from polygraphml.adapters.datasets import TabularDatasetAdapter
 from polygraphml.adapters.notebooks import NotebookInspector
 from polygraphml.agent.runtime import (
     AgentInvestigationPlan,
+    AgentInvestigationResult,
     AuditAgentContext,
     fixture_investigation,
     run_live_investigation,
     sanitize_dataset_profile,
 )
+from polygraphml.benchmarks.catalog import TARGET_PROXY_BENCHMARK_ID
 from polygraphml.config import Settings
 from polygraphml.domain.ids import new_id
 from polygraphml.domain.models import (
     Actor,
+    AgentExecutionProvenance,
     Artifact,
     ArtifactKind,
     Audit,
@@ -28,11 +31,13 @@ from polygraphml.domain.models import (
     Correction,
     DatasetProfile,
     EventType,
+    Evidence,
     Finding,
     FindingMechanism,
     FindingStatus,
     Hypothesis,
     JobMessage,
+    ProbeKind,
     Project,
     Question,
     Severity,
@@ -44,8 +49,11 @@ from polygraphml.domain.policy import ConfirmationEvidence, decide_finding_statu
 from polygraphml.engine.probes import (
     duplicate_overlap_evidence,
     feature_availability_evidence,
+    feature_provenance_evidence,
     group_overlap_evidence,
+    metric_contract_evidence,
     preprocessing_order_evidence,
+    target_proxy_association_evidence,
 )
 from polygraphml.engine.reproduction import ReproductionEngine
 from polygraphml.errors import PolygraphError
@@ -68,7 +76,7 @@ class AuditCoordinator:
         self.repository = repository
         self.artifact_store = artifact_store
         self.queue = queue
-        self.reproduction = ReproductionEngine()
+        self.reproduction = ReproductionEngine(settings)
         self.worker_id = new_id("wrk")
 
     async def process(self, job: ClaimedJob) -> None:
@@ -90,6 +98,11 @@ class AuditCoordinator:
                     await self._resume(audit)
                 self.queue.acknowledge(job)
             except PolygraphError as exc:
+                if exc.code == "EXECUTION_TIMEOUT":
+                    self.queue.acknowledge(job)
+                    current = self.repository.get(Audit, audit.audit_id) or audit
+                    self._mark_compute_inconclusive(current, exc)
+                    return
                 status = self.queue.retry(job, exc.code)
                 current = self.repository.get(Audit, audit.audit_id) or audit
                 if status == "queued":
@@ -231,9 +244,13 @@ class AuditCoordinator:
         )
 
         self._transition(audit, AuditStatus.INTERROGATING, "semantic_investigation")
-        plan, actor, degraded = await self._investigation_plan(
+        plan, actor, degraded, execution = await self._investigation_plan(
             audit, project, profile, notebook_summary
         )
+        audit.provenance.agent_model = execution.requested_model
+        audit.provenance.prompt_schema_version = execution.harness_version
+        audit.provenance.agent_execution = execution
+        self.repository.put(audit)
         if degraded:
             self._emit(
                 audit,
@@ -248,42 +265,51 @@ class AuditCoordinator:
             audit,
             EventType.REASONING_SUMMARY,
             actor,
-            {"summary": plan.reasoning_summary, "source": self.settings.agent_mode},
+            {
+                "summary": plan.reasoning_summary,
+                "source": execution.mode,
+                "harness_version": execution.harness_version,
+            },
         )
-        hypothesis = self._persist_primary_hypothesis(audit, plan, actor)
-        finding = Finding(
-            finding_id=new_id("fnd"),
-            mechanism=hypothesis.mechanism,
-            features=hypothesis.features,
-            status=FindingStatus.NEEDS_CONTEXT,
-            severity=Severity.HIGH,
-            confidence=0.6,
-            conclusion="Feature availability must be established before this hypothesis can be tested.",
-            hypothesis_ids=[hypothesis.hypothesis_id],
-            what_would_change_this=hypothesis.falsification_condition,
-        )
-        self.repository.put(finding)
-        audit.finding_ids.append(finding.finding_id)
-
         question_proposal = plan.question
-        if question_proposal is None:
-            question_proposal = fixture_investigation(hypothesis.features[0]).question
         if question_proposal is None:
             raise PolygraphError(
                 "MODEL_OUTPUT_INVALID", "Investigation did not provide a question."
             )
+        hypotheses_by_key = self._persist_hypotheses(audit, plan, actor)
+        affected_key = question_proposal.affected_hypothesis_keys[0]
+        affected_hypothesis = hypotheses_by_key[affected_key]
+        for key, hypothesis in hypotheses_by_key.items():
+            affected = key == affected_key
+            finding = Finding(
+                finding_id=new_id("fnd"),
+                mechanism=hypothesis.mechanism,
+                features=hypothesis.features,
+                status=FindingStatus.NEEDS_CONTEXT if affected else FindingStatus.SUSPECTED,
+                severity=Severity.HIGH if affected else Severity.MEDIUM,
+                confidence=0.6 if affected else 0.4,
+                conclusion=(
+                    "Material scenario or provenance context is required before this hypothesis "
+                    "can be tested."
+                    if affected
+                    else "This ranked hypothesis remains untested in the current bounded audit."
+                ),
+                hypothesis_ids=[hypothesis.hypothesis_id],
+                what_would_change_this=hypothesis.falsification_condition,
+            )
+            self.repository.put(finding)
+            audit.finding_ids.append(finding.finding_id)
         question = Question(
             question_id=new_id("qst"),
             audit_id=audit.audit_id,
             text=question_proposal.text,
             why_it_matters=question_proposal.why_it_matters,
-            affected_hypothesis_ids=[hypothesis.hypothesis_id],
+            affected_hypothesis_ids=[affected_hypothesis.hypothesis_id],
             answer_type=question_proposal.answer_type,  # type: ignore[arg-type]
             options=question_proposal.options,
             blocking=question_proposal.blocking,
         )
         self.repository.put(question)
-        audit.hypothesis_ids.append(hypothesis.hypothesis_id)
         audit.question_ids.append(question.question_id)
         self.repository.put(audit)
         self._emit(
@@ -291,7 +317,7 @@ class AuditCoordinator:
             EventType.QUESTION,
             actor,
             question.model_dump(mode="json"),
-            [f"hypothesis:{hypothesis.hypothesis_id}"],
+            [f"hypothesis:{affected_hypothesis.hypothesis_id}"],
         )
         self._transition(audit, AuditStatus.WAITING_FOR_USER, "waiting_for_user")
 
@@ -330,23 +356,6 @@ class AuditCoordinator:
             raise PolygraphError("INTERNAL", "The affected finding was not found.", status_code=500)
 
         self._transition(audit, AuditStatus.PROBING, "deterministic_probes")
-        availability = feature_availability_evidence(
-            hypothesis.hypothesis_id,
-            hypothesis.features[0],
-            answered.answer,
-            [f"user_answer:{answered.question_id}", *hypothesis.source_refs],
-        )
-        self.repository.put(availability)
-        audit.evidence_ids.append(availability.evidence_id)
-        finding.evidence_ids.append(availability.evidence_id)
-        self._emit(
-            audit,
-            EventType.EVIDENCE,
-            Actor.TOOL,
-            availability.model_dump(mode="json"),
-            availability.source_refs,
-        )
-
         result = self.reproduction.reproduce(
             project.mapping,
             {artifact.artifact_id: artifact for artifact in artifacts},
@@ -355,6 +364,73 @@ class AuditCoordinator:
         )
         frame = result.frame
         split_column = str(project.mapping.split_column)
+        target_column = str(project.mapping.target_column)
+        feature = hypothesis.features[0]
+        answer_refs = [f"user_answer:{answered.question_id}", *hypothesis.source_refs]
+        semantic_evidence_ids: list[str] = []
+        mechanism_established = False
+        mechanism_cleared = False
+        protocol_invalidating = False
+
+        if hypothesis.requested_probe == ProbeKind.FEATURE_AVAILABILITY:
+            availability = feature_availability_evidence(
+                hypothesis.hypothesis_id,
+                feature,
+                answered.answer,
+                answer_refs,
+            )
+            self._record_evidence(audit, finding, availability)
+            semantic_evidence_ids.append(availability.evidence_id)
+            mechanism_established = bool(availability.metrics["unavailable_at_decision"])
+            mechanism_cleared = bool(availability.metrics["available_at_decision"])
+            association = target_proxy_association_evidence(
+                hypothesis.hypothesis_id,
+                frame,
+                target_column,
+                split_column,
+                feature,
+                [f"artifact:{project.mapping.dataset_artifact_id}"],
+            )
+            self._record_evidence(audit, finding, association)
+        elif hypothesis.requested_probe == ProbeKind.TARGET_PROXY_ASSOCIATION:
+            provenance = feature_provenance_evidence(
+                hypothesis.hypothesis_id,
+                feature,
+                answered.answer,
+                answer_refs,
+            )
+            self._record_evidence(audit, finding, provenance)
+            semantic_evidence_ids.append(provenance.evidence_id)
+            mechanism_established = bool(provenance.metrics["target_derived"])
+            mechanism_cleared = bool(provenance.metrics["independent_input"])
+            association = target_proxy_association_evidence(
+                hypothesis.hypothesis_id,
+                frame,
+                target_column,
+                split_column,
+                feature,
+                [f"artifact:{project.mapping.dataset_artifact_id}"],
+            )
+            self._record_evidence(audit, finding, association)
+        elif hypothesis.requested_probe == ProbeKind.METRIC_CONTRACT:
+            metric_contract = metric_contract_evidence(
+                hypothesis.hypothesis_id,
+                project.current_scenario.intended_metric if project.current_scenario else "roc_auc",
+                [claim.metric for claim in result.notebook.claims],
+                [claim.source_ref for claim in result.notebook.claims],
+            )
+            self._record_evidence(audit, finding, metric_contract)
+            semantic_evidence_ids.append(metric_contract.evidence_id)
+            metric_matches = bool(metric_contract.metrics["metric_matches"])
+            mechanism_established = not metric_matches
+            mechanism_cleared = metric_matches
+            protocol_invalidating = not metric_matches
+        else:
+            raise PolygraphError(
+                "EXECUTION_UNSUPPORTED",
+                f"Probe {hypothesis.requested_probe.value} is not dispatched.",
+            )
+
         duplication = duplicate_overlap_evidence(frame, split_column)
         self.repository.put(duplication)
         audit.evidence_ids.append(duplication.evidence_id)
@@ -396,6 +472,7 @@ class AuditCoordinator:
                     evidence_id=groups.evidence_id,
                     conclusion="Declared entity groups overlap between train and test.",
                     what_changes="A group-aware split with no entity present on both sides.",
+                    features=[str(project.mapping.entity_column)],
                 )
             else:
                 self._persist_clearance(
@@ -437,21 +514,28 @@ class AuditCoordinator:
                 what_changes="A runtime trace proving the transformer was fit on training rows only.",
             )
 
-        unavailable = bool(availability.metrics["unavailable_at_decision"])
-        if unavailable:
+        should_correct = mechanism_established and hypothesis.requested_probe in {
+            ProbeKind.FEATURE_AVAILABILITY,
+            ProbeKind.TARGET_PROXY_ASSOCIATION,
+        }
+        if should_correct:
             self._transition(audit, AuditStatus.CORRECTING, "corrected_evaluation")
             audit.metric_comparison = self.reproduction.correct(
                 result, project.mapping, hypothesis.features
             )
             correction = Correction(
                 correction_id=new_id("cor"),
-                kind="remove_unavailable_feature",
+                kind=(
+                    "remove_target_proxy"
+                    if hypothesis.mechanism == FindingMechanism.TARGET_PROXY
+                    else "remove_unavailable_feature"
+                ),
                 description=(
                     f"Retrained the evaluation estimator without {', '.join(hypothesis.features)}."
                 ),
                 features_removed=hypothesis.features,
                 protocol_id="proto_corrected_v1",
-                evidence_ids=[availability.evidence_id],
+                evidence_ids=semantic_evidence_ids,
             )
             self.repository.put(correction)
             audit.correction_ids.append(correction.correction_id)
@@ -461,6 +545,7 @@ class AuditCoordinator:
                     scenario_established=True,
                     mechanism_evidence_count=1,
                     impact_measured=True,
+                    protocol_invalidating=protocol_invalidating,
                     contradictions_resolved=True,
                     ablation_delta=(
                         audit.metric_comparison.reproduced.value
@@ -472,10 +557,7 @@ class AuditCoordinator:
             )
             finding.status = status
             finding.confidence = 0.96
-            finding.conclusion = (
-                f"{hypothesis.features[0]} is unavailable at the stated decision point and materially "
-                "inflates the submitted evaluation."
-            )
+            finding.conclusion = self._confirmed_conclusion(hypothesis)
             self._emit(
                 audit,
                 EventType.CORRECTION,
@@ -484,14 +566,28 @@ class AuditCoordinator:
                     **correction.model_dump(mode="json"),
                     "metric_comparison": audit.metric_comparison.model_dump(mode="json"),
                 },
-                [availability.evidence_id, "compute:correction@1"],
+                [*semantic_evidence_ids, "compute:correction@1"],
             )
-        else:
+        elif mechanism_established:
+            finding.status = decide_finding_status(
+                ConfirmationEvidence(
+                    scenario_established=True,
+                    mechanism_evidence_count=1,
+                    impact_measured=False,
+                    protocol_invalidating=protocol_invalidating,
+                    contradictions_resolved=True,
+                )
+            )
+            finding.confidence = 0.92
+            finding.conclusion = self._confirmed_conclusion(hypothesis)
+        elif mechanism_cleared:
             finding.status = FindingStatus.CLEARED
-            finding.confidence = 0.75
-            finding.conclusion = (
-                "The supplied scenario answer did not establish post-outcome unavailability."
-            )
+            finding.confidence = 0.82
+            finding.conclusion = self._cleared_conclusion(hypothesis)
+        else:
+            finding.status = FindingStatus.INCONCLUSIVE
+            finding.confidence = 0.5
+            finding.conclusion = "The supplied context did not establish or falsify the mechanism."
 
         self.repository.put(finding)
         self.repository.put(audit)
@@ -522,13 +618,11 @@ class AuditCoordinator:
                 "The reported score is reproducible under the submitted split but materially "
                 "inflated for the declared decision scenario."
                 if confirmed
-                else "The tested post-outcome mechanism was not confirmed under the supplied answer."
+                else "The tested semantic mechanism was not confirmed under the supplied context."
             ),
             finding_counts=counts,
             unsupported_checks=[
-                "metric_contract_equivalence",
                 "near_duplicate_similarity",
-                "target_proxy_semantics",
                 "temporal_backtesting",
             ],
         )
@@ -552,7 +646,7 @@ class AuditCoordinator:
         project: Project,
         profile: object,
         notebook: object,
-    ) -> tuple[AgentInvestigationPlan, Actor, bool]:
+    ) -> tuple[AgentInvestigationPlan, Actor, bool, AgentExecutionProvenance]:
         scenario = project.current_scenario
         if scenario is None:
             raise PolygraphError("SCENARIO_INCOMPLETE", "A scenario is required.")
@@ -572,34 +666,67 @@ class AuditCoordinator:
         )
         if self.settings.live_agent_ready:
             try:
-                plan = await run_live_investigation(
+                outcome = await run_live_investigation(
                     self.settings,
                     AuditAgentContext(
                         scenario=scenario,
                         dataset_profile=sanitize_dataset_profile(profile),  # type: ignore[arg-type]
                         notebook_summary=notebook.model_dump(mode="json"),  # type: ignore[attr-defined]
                         supported_probes=(
-                            "feature_availability",
-                            "group_overlap",
-                            "exact_duplicate_overlap",
-                            "preprocessing_order",
-                            "corrected_evaluation",
+                            ProbeKind.FEATURE_AVAILABILITY,
+                            ProbeKind.TARGET_PROXY_ASSOCIATION,
+                            ProbeKind.METRIC_CONTRACT,
                         ),
                         candidate_features=candidate_features,
+                        feature_context={
+                            name: context.description
+                            for name, context in project.feature_context.items()
+                        },
                     ),
                     audit.audit_id,
                 )
-                return plan, Actor.AGENT, False
-            except PolygraphError:
+                if isinstance(outcome, AgentInvestigationResult):
+                    return outcome.plan, Actor.AGENT, False, outcome.execution
+                # Compatibility for deterministic test doubles at the model boundary.
                 return (
-                    fixture_investigation(self._fixture_feature(profile, project, audit)),
+                    outcome,
+                    Actor.AGENT,
+                    False,
+                    AgentExecutionProvenance(
+                        provider="openai",
+                        mode="live",
+                        requested_model=self.settings.openai_model,
+                        resolved_model=self.settings.openai_model,
+                    ),
+                )
+            except PolygraphError as exc:
+                fallback = fixture_investigation(
+                    self._fixture_feature(profile, project, audit),
+                    self._fixture_mechanism(project),
+                )
+                return (
+                    fallback,
                     Actor.SYSTEM,
                     True,
+                    AgentExecutionProvenance(
+                        provider="fixture",
+                        mode="degraded",
+                        requested_model=self.settings.openai_model,
+                        failure_code=exc.code,
+                    ),
                 )
+        fallback = fixture_investigation(
+            self._fixture_feature(profile, project, audit), self._fixture_mechanism(project)
+        )
         return (
-            fixture_investigation(self._fixture_feature(profile, project, audit)),
+            fallback,
             Actor.SYSTEM,
             True,
+            AgentExecutionProvenance(
+                provider="fixture",
+                mode="fixture",
+                requested_model=self.settings.openai_model,
+            ),
         )
 
     @staticmethod
@@ -625,32 +752,85 @@ class AuditCoordinator:
         )
         return semantic or (candidates[-1] if candidates else "unknown_feature")
 
-    def _persist_primary_hypothesis(
+    @staticmethod
+    def _fixture_mechanism(project: Project) -> FindingMechanism:
+        if project.source.benchmark_id == TARGET_PROXY_BENCHMARK_ID:
+            return FindingMechanism.TARGET_PROXY
+        return FindingMechanism.POST_OUTCOME
+
+    def _persist_hypotheses(
         self,
         audit: Audit,
         plan: AgentInvestigationPlan,
         actor: Actor,
-    ) -> Hypothesis:
-        proposal = plan.hypotheses[0]
-        hypothesis = Hypothesis(
-            hypothesis_id=new_id("hyp"),
-            mechanism=proposal.mechanism,
-            features=proposal.features,
-            assumptions=proposal.assumptions,
-            rationale_summary=proposal.rationale_summary,
-            requested_probe=proposal.requested_probe,
-            falsification_condition=proposal.falsification_condition,
-            source_refs=proposal.source_refs,
-        )
-        self.repository.put(hypothesis)
+    ) -> dict[str, Hypothesis]:
+        persisted: dict[str, Hypothesis] = {}
+        for proposal in plan.hypotheses:
+            hypothesis = Hypothesis(
+                hypothesis_id=new_id("hyp"),
+                mechanism=proposal.mechanism,
+                features=proposal.features,
+                assumptions=proposal.assumptions,
+                rationale_summary=proposal.rationale_summary,
+                requested_probe=proposal.requested_probe,
+                falsification_condition=proposal.falsification_condition,
+                source_refs=proposal.source_refs,
+            )
+            self.repository.put(hypothesis)
+            audit.hypothesis_ids.append(hypothesis.hypothesis_id)
+            persisted[proposal.hypothesis_key] = hypothesis
+            self._emit(
+                audit,
+                EventType.HYPOTHESIS,
+                actor,
+                {
+                    **hypothesis.model_dump(mode="json"),
+                    "hypothesis_key": proposal.hypothesis_key,
+                },
+                hypothesis.source_refs,
+            )
+        return persisted
+
+    def _record_evidence(
+        self,
+        audit: Audit,
+        finding: Finding,
+        evidence: Evidence,
+    ) -> None:
+        self.repository.put(evidence)
+        audit.evidence_ids.append(evidence.evidence_id)
+        finding.evidence_ids.append(evidence.evidence_id)
         self._emit(
             audit,
-            EventType.HYPOTHESIS,
-            actor,
-            hypothesis.model_dump(mode="json"),
-            hypothesis.source_refs,
+            EventType.EVIDENCE,
+            Actor.TOOL,
+            evidence.model_dump(mode="json"),
+            evidence.source_refs,
         )
-        return hypothesis
+
+    @staticmethod
+    def _confirmed_conclusion(hypothesis: Hypothesis) -> str:
+        feature = hypothesis.features[0]
+        if hypothesis.mechanism == FindingMechanism.TARGET_PROXY:
+            return (
+                f"{feature} is derived from or assigned after the target outcome, and its measured "
+                "evaluation impact is recorded in the correction evidence."
+            )
+        if hypothesis.mechanism == FindingMechanism.METRIC_MISMATCH:
+            return "The notebook's reported metric does not match the declared evaluation contract."
+        return (
+            f"{feature} is unavailable at the stated decision point, and its measured evaluation "
+            "impact is recorded in the correction evidence."
+        )
+
+    @staticmethod
+    def _cleared_conclusion(hypothesis: Hypothesis) -> str:
+        feature = hypothesis.features[0]
+        if hypothesis.mechanism == FindingMechanism.TARGET_PROXY:
+            return f"The supplied provenance establishes {feature} as an independent input."
+        if hypothesis.mechanism == FindingMechanism.METRIC_MISMATCH:
+            return "The notebook reports the metric declared by the evaluation scenario."
+        return f"The supplied scenario establishes {feature} as available at the decision point."
 
     def _persist_clearance(
         self,
@@ -659,11 +839,12 @@ class AuditCoordinator:
         evidence_id: str,
         conclusion: str,
         what_changes: str,
+        features: list[str] | None = None,
     ) -> None:
         finding = Finding(
             finding_id=new_id("fnd"),
             mechanism=FindingMechanism(mechanism),
-            features=[],
+            features=features or [],
             status=FindingStatus.CLEARED,
             severity=Severity.INFO,
             confidence=0.9,
@@ -690,11 +871,12 @@ class AuditCoordinator:
         evidence_id: str,
         conclusion: str,
         what_changes: str,
+        features: list[str] | None = None,
     ) -> None:
         finding = Finding(
             finding_id=new_id("fnd"),
             mechanism=mechanism,
-            features=[],
+            features=features or [],
             status=status,
             severity=severity,
             confidence=0.98 if status == FindingStatus.CONFIRMED else 0.7,
@@ -747,6 +929,82 @@ class AuditCoordinator:
                 payload=payload,
                 provenance_refs=provenance_refs or [],
             ),
+        )
+
+    def _mark_compute_inconclusive(self, audit: Audit, error: PolygraphError) -> None:
+        findings = [
+            finding
+            for finding_id in audit.finding_ids
+            if (finding := self.repository.get(Finding, finding_id)) is not None
+        ]
+        if findings:
+            for finding in findings:
+                if finding.status not in {FindingStatus.CONFIRMED, FindingStatus.CLEARED}:
+                    finding.status = FindingStatus.INCONCLUSIVE
+                    finding.conclusion = (
+                        "The bounded model computation timed out before this mechanism could be "
+                        "decided."
+                    )
+                    finding.what_would_change_this = (
+                        "A smaller supported artifact or an evaluation that completes within the "
+                        "published compute limits."
+                    )
+                    self.repository.put(finding)
+                    self._emit(
+                        audit,
+                        EventType.FINDING_CHANGED,
+                        Actor.SYSTEM,
+                        finding.model_dump(mode="json"),
+                        finding.evidence_ids,
+                    )
+        else:
+            finding = Finding(
+                finding_id=new_id("fnd"),
+                mechanism=FindingMechanism.OTHER,
+                features=[],
+                status=FindingStatus.INCONCLUSIVE,
+                severity=Severity.MEDIUM,
+                confidence=1.0,
+                conclusion=(
+                    "The bounded model computation timed out before model evaluation completed."
+                ),
+                what_would_change_this=(
+                    "A smaller supported artifact or an evaluation that completes within the "
+                    "published compute limits."
+                ),
+            )
+            self.repository.put(finding)
+            audit.finding_ids.append(finding.finding_id)
+            findings.append(finding)
+        audit.status = AuditStatus.FAILED_PARTIAL
+        audit.checkpoint = "compute_inconclusive"
+        audit.verdict = Verdict(
+            trust_state=TrustState.INCONCLUSIVE,
+            summary="Model quality could not be decided within the bounded compute budget.",
+            finding_counts={
+                "inconclusive": sum(
+                    finding.status == FindingStatus.INCONCLUSIVE for finding in findings
+                )
+            },
+            unsupported_checks=["model_evaluation_after_timeout"],
+        )
+        audit.updated_at = utc_now()
+        self.repository.put(audit)
+        self._emit(
+            audit,
+            EventType.ERROR,
+            Actor.SYSTEM,
+            {
+                "code": error.code,
+                "message": error.message,
+                "retry_status": "not_retried",
+            },
+        )
+        self._emit(
+            audit,
+            EventType.VERDICT,
+            Actor.SYSTEM,
+            {"verdict": audit.verdict.model_dump(mode="json"), "metric_comparison": None},
         )
 
     def _project(self, audit: Audit) -> Project:

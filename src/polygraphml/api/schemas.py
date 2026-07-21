@@ -1,10 +1,23 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
-from polygraphml.domain.models import ArtifactKind, ArtifactMapping, AuditMode, Scenario
+from polygraphml.domain.models import (
+    Artifact,
+    ArtifactKind,
+    ArtifactMapping,
+    Audit,
+    AuditEvent,
+    AuditMode,
+    Finding,
+    Project,
+    Question,
+    RepairBundle,
+    Scenario,
+)
 
 
 class ApiModel(BaseModel):
@@ -75,5 +88,47 @@ class ErrorBody(ApiModel):
     request_id: str
 
 
-def success(data: Any) -> dict[str, Any]:
+class SuccessEnvelope[ResponseT](ApiModel):
+    data: ResponseT
+    error: None = None
+
+
+class ProjectResponse(Project):
+    artifacts: list[Artifact]
+
+
+class AuditResponse(Audit):
+    findings: list[Finding]
+    open_questions: list[Question]
+    events_url: str
+
+
+class SessionResponse(ApiModel):
+    access_token: str
+    expires_at: datetime
+    limits: dict[str, int]
+
+
+class ReadinessResponse(ApiModel):
+    status: Literal["ready"]
+    agent_mode: Literal["fixture", "live"]
+    live_agent_ready: bool
+
+
+class VersionResponse(ApiModel):
+    api_version: str
+    release_version: str
+    build_sha: str
+    evaluator_version: str
+
+
+class RepairBundleResponse(RepairBundle):
+    download_url: str | None = None
+
+
+class DecisionTraceResponse(ApiModel):
+    events: list[AuditEvent]
+
+
+def success[ResponseT](data: ResponseT) -> dict[str, ResponseT | None]:
     return {"data": data, "error": None}

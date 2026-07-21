@@ -22,9 +22,15 @@ def test_auth_scope_and_strict_request_contract(
         "agent_mode": "fixture",
         "live_agent_ready": False,
     }
+    assert client.get("/version").json() == {
+        "api_version": "1.2",
+        "release_version": "0.2.0",
+        "build_sha": "unknown",
+        "evaluator_version": "0.2.0",
+    }
     assert client.get("/api/v1/benchmarks").status_code == 401
     benchmarks = client.get("/api/v1/benchmarks", headers=headers).json()["data"]
-    assert benchmarks[0]["benchmark_id"] == "synthetic_campaign_leak_v1"
+    assert benchmarks[0]["benchmark_id"] == "uci_bank_marketing_duration_v1"
     response = client.post(
         "/api/v1/projects",
         headers=headers,

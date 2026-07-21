@@ -1,6 +1,6 @@
 # Technical Design Document — PolygraphML
 
-**Version:** 1.1 · **Owner:** David · **Date:** July 18, 2026 · **Status:** Approved foundation
+**Version:** 1.2 · **Owner:** David · **Date:** July 21, 2026 · **Status:** v0.2 release candidate
 
 ## 1. Overview
 
@@ -26,7 +26,8 @@ The product must distinguish a semantic suspicion from a confirmed defect, an ab
 | `Finding` | Lifecycle and conclusion tying hypotheses to evidence and correction |
 | `MetricComparison` | Reported, reproduced, and corrected metrics with protocol and tolerance |
 | `AuditEvent` | Ordered, sanitized Decision Trace record |
-| `Report` | Technical or stakeholder rendering of immutable audit results |
+| `Report` | Technical or executive rendering of immutable audit results |
+| `RepairBundle` | Deterministic patch/correction/protocol archive, hash, or explicit unavailable result |
 
 Full transport shapes are defined in [API_CONTRACT.md](API_CONTRACT.md).
 
@@ -69,7 +70,7 @@ Arbitrary JSON is never assumed to be a model. Pickle, joblib, and cloudpickle a
 
 ### Notebook/pipeline parser
 
-Parse `.ipynb` and Python source without executing it to identify imports, data reads, split calls, preprocessing fit/transform order, training calls, metric calculations, printed claims, seeds, and source locations. A `polygraphml.yaml` manifest can resolve ambiguity but cannot override security policy.
+Parse `.ipynb` and Python source without executing it to identify imports, data reads, split calls, preprocessing fit/transform order, training calls, metric calculations, printed claims, seeds, and source locations. A strict root `.polygraphml.yml` manifest can resolve ambiguity but cannot override security policy. Every declared path is normalized, allowlisted, and paired with an exact lowercase SHA-256 hash.
 
 ## 5. Scenario and follow-up questions
 
@@ -95,7 +96,7 @@ The MVP uses one `AuditAgent` implemented with the OpenAI Agents SDK and explici
 - static notebook-summary inspection;
 - supported-probe discovery.
 
-The structured plan can request a supported probe and propose one question, while application code owns probe execution, correction, finding transitions, and reports. P0 validates that the primary live hypothesis is `post_outcome`, requests `feature_availability`, and names only a feature from reconstructed model feature order; unsupported output degrades visibly instead of being reinterpreted. The agent cannot write metric values directly. Structured model outputs are validated and bounded by a five-turn limit; a failure degrades to the deterministic fixture plan with an explicit warning event.
+The structured plan returns one to three ranked hypotheses and exactly one material question. Supported semantic pairs are `post_outcome → feature_availability`, `target_proxy → target_proxy_association`, and `metric_mismatch → metric_contract`; split, group, and preprocessing checks run automatically in deterministic code. Hypotheses may name only reconstructed model features and must include assumptions, source references, concise rationale, and a falsifier. Application code owns dispatch, evidence, correction, finding transitions, and reports. Unsupported output degrades visibly instead of being reinterpreted. The agent cannot write metric values directly. Structured output is validated and bounded by a five-turn limit.
 
 No multi-agent handoffs are required for the MVP. A second agent is justified only if benchmark evaluation demonstrates a measurable quality, latency, or maintainability improvement.
 
@@ -103,12 +104,14 @@ No multi-agent handoffs are required for the MVP. A second agent is justified on
 
 The engine seeks the closest safe reproduction tier:
 
-1. **Exact supported reconstruction:** safe adapter plus parsed evaluation protocol can rerun the submitted model.
+1. **Exact supported reconstruction:** safe adapter plus parsed evaluation protocol can evaluate the submitted model.
 2. **Controlled pipeline reconstruction:** PolygraphML rebuilds the split/preprocessing/evaluation from declared evidence.
 3. **Reference challenger:** when the user artifact cannot run, a versioned baseline estimates dataset-level effects without pretending to reproduce the submitted model.
 4. **Static-only review:** code and scenario issues are reported, but metric reproduction is marked unavailable.
 
 The tier is visible in every metric comparison. Reproducibility captures source commit, artifact hashes, library versions, seed, split indices or hashes, feature order, and evaluator version.
+
+Approved model loading, prediction, and correction/retraining run in a child process with wall/CPU/address-space/file-descriptor/output limits, single-thread library settings, a sanitized environment, and process-group termination. This reduces accidental resource and secret exposure but is not a hostile-code sandbox. Notebook/source execution remains out of scope.
 
 ## 8. Deterministic probe suite
 
@@ -116,12 +119,13 @@ The tier is visible in every metric comparison. Reproducibility captures source 
 |---|---|---|
 | Reported metric extraction | Claim and source location | Notebook output/AST/manifest parsing |
 | Metric reconstruction | Reproduced score and tolerance | Versioned evaluator on preserved split |
-| Single-feature power | Held-out predictive signal | Ablation/correction on the reconstructed model; broader univariate probes are P1 |
+| Single-feature power | Held-out predictive signal | Train-only preprocessing and a held-out univariate challenger |
 | Exact duplication | Cross-split overlap | Stable row hashes |
 | Group contamination | Entity overlap | Group IDs across split membership |
 | Post-outcome availability | Feature unavailable at decision time | Scenario answer plus feature correction |
 | Temporal backtesting | Future-window contamination | P1; surfaced as an unsupported limitation |
-| Target proxy | Implausible target association | P1; surfaced as an unsupported limitation |
+| Target proxy | Target-derived provenance plus held-out association | Supported semantic question and deterministic association/correction |
+| Metric contract | Declared metric versus notebook claim | Supported semantic question and deterministic metric comparison |
 | Preprocessing leakage | Fit before split/fold | Static pipeline inspection and reconstructed comparison |
 | Ablation | Model reliance and impact | Reevaluate/retrain without suspect feature set |
 | Corrected evaluation | Honest protocol result | Smallest justified split/preprocessing/feature repair |
@@ -158,6 +162,8 @@ Question pauses do not hold an SQS message indefinitely. The worker persists `wa
 
 Artifacts and large results live in S3. DynamoDB stores metadata, current state, ordered events, and immutable references. S3 object keys are content- or audit-addressed so retries do not create divergent outputs.
 
+The React client consumes authenticated SSE with `Last-Event-ID`, bounded exponential reconnect, and JSON polling fallback. Refresh restores the audit/session and fetches only events after the last committed sequence.
+
 ## 12. Security design
 
 - API and coordinator containers never load remote pickle-like objects.
@@ -176,6 +182,7 @@ Artifacts and large results live in S3. DynamoDB stores metadata, current state,
 - SSE loss triggers event replay or polling.
 - Duplicate SQS delivery is a no-op after the matching checkpoint.
 - A correction failure preserves the original and reproduced metrics and explains why corrected performance is unavailable.
+- A deterministic repair is generated only for one unambiguous literal `features` assignment containing every removed feature; dynamic or ambiguous code returns an `unavailable` bundle record.
 
 ## 14. Testing and evaluation
 
@@ -191,7 +198,8 @@ Artifacts and large results live in S3. DynamoDB stores metadata, current state,
 
 - Synthetic micro-datasets with one planted mechanism each.
 - Multi-leak synthetic cases and a fully clean control.
-- Public repository/notebook/model cases with pinned artifacts and predeclared expected findings.
+- The full licensed UCI Bank Marketing model/data/notebook bundle as the flagship semantic case, with exact source and derived-artifact hashes.
+- A synthetic semantic target proxy whose innocuous name requires provenance, plus a suspicious-looking hard negative that must clear.
 - A licensed UCI COVID-19 surveillance clean control with explicit non-clinical claim boundaries.
 
-Quality reporting includes confirmed-finding precision/recall, false confirmations on clean controls, reproduction error, corrected-metric error, question usefulness, latency, token usage, and cost. A benchmark failure cannot be hidden by changing the expected answer after the run.
+Quality reporting includes raw case/pair counts, Wilson intervals, confirmed-finding precision/recall, false confirmations on two clean controls, reproduction error, corrected-metric error, exact mechanism/feature accuracy, question usefulness, schema failures, degradation, latency, token usage, and cost. A benchmark failure cannot be hidden by changing the expected answer after the run. The live release gate is exactly three predeclared calls: flagship, semantic proxy, and hard negative.

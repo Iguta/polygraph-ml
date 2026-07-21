@@ -175,8 +175,23 @@ a {
   background: rgba(107, 230, 173, 0.07);
   border-color: rgba(107, 230, 173, 0.25);
 }
+.mode-badge.degraded {
+  color: var(--red);
+  background: rgba(243, 132, 117, 0.07);
+  border-color: rgba(243, 132, 117, 0.28);
+}
+.build-badge {
+  color: #71877b;
+  font:
+    500 10px/1 "DM Mono",
+    monospace;
+  white-space: nowrap;
+}
 
 .stepper {
+  width: 100%;
+  min-width: 0;
+  max-width: 100vw;
   padding: 18px clamp(22px, 4vw, 68px);
   border-bottom: 1px solid var(--line);
   overflow-x: auto;
@@ -1383,6 +1398,34 @@ textarea {
     400 11px/1.7 "DM Mono",
     monospace;
 }
+.repair-status {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border: 1px solid rgba(107, 230, 173, 0.24);
+  border-radius: 12px;
+  background: rgba(107, 230, 173, 0.055);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--mint);
+}
+.repair-status.unavailable {
+  color: var(--amber);
+  border-color: rgba(244, 188, 106, 0.24);
+  background: rgba(244, 188, 106, 0.055);
+}
+.repair-status svg {
+  width: 20px;
+  flex: 0 0 auto;
+}
+.repair-status strong {
+  color: var(--text);
+}
+.repair-status p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
 
 .global-error {
   position: sticky;
@@ -1500,15 +1543,22 @@ textarea {
 @media (max-width: 760px) {
   .topbar {
     height: 66px;
+    padding-inline: 14px;
+  }
+  .mode-area {
+    gap: 8px;
   }
   .mode-area > a {
     display: none;
   }
   .mode-badge {
-    max-width: 168px;
+    max-width: 154px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .build-badge {
+    display: none;
   }
   .stepper {
     padding-inline: 18px;

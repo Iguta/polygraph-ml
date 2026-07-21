@@ -7,14 +7,22 @@ from pathlib import Path
 import pytest
 
 from polygraphml.agent.runtime import (
+    AgentHypothesisProposal,
+    AgentInvestigationPlan,
+    AgentQuestionProposal,
     AuditAgentContext,
     fixture_investigation,
     sanitize_dataset_profile,
     validate_investigation_plan,
 )
+from polygraphml.benchmarks.catalog import POST_OUTCOME_BENCHMARK_ID
 from polygraphml.config import Settings
+from polygraphml.domain.ids import new_id
 from polygraphml.domain.models import (
     Actor,
+    AdapterStatus,
+    Artifact,
+    ArtifactKind,
     Audit,
     AuditEvent,
     AuditMode,
@@ -25,11 +33,18 @@ from polygraphml.domain.models import (
     Finding,
     FindingMechanism,
     FindingStatus,
+    ProbeKind,
+    ProjectSource,
     Scenario,
     Severity,
+    SourceType,
 )
 from polygraphml.errors import PolygraphError
 from polygraphml.operations.live_trace import build_sanitized_live_trace, run_live_smoke
+from polygraphml.operations.public_github_gate import (
+    PublicGitHubGateReport,
+    run_public_github_gate,
+)
 from polygraphml.operations.queue_timing import (
     recommend_queue_timing,
     report_from_benchmark,
@@ -92,12 +107,124 @@ def test_live_plan_is_constrained_to_shipped_primary_probe() -> None:
         notebook_summary={},
         supported_probes=("feature_availability",),
         candidate_features=("call_duration",),
+        feature_context={},
     )
     valid = fixture_investigation("call_duration")
     assert validate_investigation_plan(context, valid) is valid
 
     invalid = fixture_investigation("unknown_feature")
     with pytest.raises(PolygraphError, match="outside model feature order"):
+        validate_investigation_plan(context, invalid)
+
+
+def test_live_plan_accepts_ranked_supported_mechanisms() -> None:
+    profile = DatasetProfile(
+        artifact_id="art_1",
+        row_count=20,
+        column_count=2,
+        columns=[
+            DatasetColumnProfile(
+                name="engagement_band",
+                dtype="str",
+                missing_fraction=0,
+                cardinality=3,
+            ),
+            DatasetColumnProfile(
+                name="call_duration",
+                dtype="float64",
+                missing_fraction=0,
+                cardinality=20,
+            ),
+        ],
+        sha256="b" * 64,
+    )
+    context = AuditAgentContext(
+        scenario=Scenario(
+            revision=1,
+            target_definition="Customer subscribes",
+            row_entity="One campaign contact",
+            decision_time="Before contact begins",
+            prediction_horizon="Current campaign",
+            split_unit="customer_id",
+            intended_metric="roc_auc",
+        ),
+        dataset_profile=profile,
+        notebook_summary={},
+        supported_probes=(
+            ProbeKind.TARGET_PROXY_ASSOCIATION,
+            ProbeKind.FEATURE_AVAILABILITY,
+        ),
+        candidate_features=("engagement_band", "call_duration"),
+        feature_context={"engagement_band": "Operational band assigned after subscription."},
+    )
+    plan = AgentInvestigationPlan(
+        hypotheses=[
+            AgentHypothesisProposal(
+                hypothesis_key="h1",
+                mechanism=FindingMechanism.TARGET_PROXY,
+                features=["engagement_band"],
+                assumptions=["The band may encode the target."],
+                rationale_summary="The feature definition describes a post-subscription assignment.",
+                requested_probe=ProbeKind.TARGET_PROXY_ASSOCIATION,
+                falsification_condition="The band is independently assigned before prediction.",
+                source_refs=["manifest:features.engagement_band"],
+            ),
+            AgentHypothesisProposal(
+                hypothesis_key="h2",
+                mechanism=FindingMechanism.POST_OUTCOME,
+                features=["call_duration"],
+                assumptions=["Prediction occurs before the call."],
+                rationale_summary="Current-call duration may not exist at selection time.",
+                requested_probe=ProbeKind.FEATURE_AVAILABILITY,
+                falsification_condition="The decision is made after the call.",
+                source_refs=["scenario:decision_time"],
+            ),
+        ],
+        question=AgentQuestionProposal(
+            text="How is engagement_band assigned relative to subscription?",
+            why_it_matters="Its provenance determines whether it can encode the target.",
+            answer_type="single_choice",
+            options=["independent", "derived_from_target", "unknown"],
+            affected_hypothesis_keys=["h1"],
+        ),
+        reasoning_summary="Two semantic mechanisms are plausible and the proxy provenance matters most.",
+    )
+    assert validate_investigation_plan(context, plan) is plan
+
+
+def test_live_plan_rejects_incompatible_mechanism_probe() -> None:
+    profile = DatasetProfile(
+        artifact_id="art_1",
+        row_count=2,
+        column_count=1,
+        columns=[
+            DatasetColumnProfile(
+                name="feature",
+                dtype="float64",
+                missing_fraction=0,
+                cardinality=2,
+            )
+        ],
+        sha256="c" * 64,
+    )
+    context = AuditAgentContext(
+        scenario=Scenario(
+            revision=1,
+            target_definition="Outcome",
+            row_entity="One row",
+            decision_time="Before outcome",
+            prediction_horizon="One day",
+            split_unit="entity",
+            intended_metric="roc_auc",
+        ),
+        dataset_profile=profile,
+        notebook_summary={},
+        supported_probes=(ProbeKind.FEATURE_AVAILABILITY,),
+        candidate_features=("feature",),
+        feature_context={},
+    )
+    invalid = fixture_investigation("feature", FindingMechanism.TARGET_PROXY)
+    with pytest.raises(PolygraphError, match="unsupported mechanism/probe"):
         validate_investigation_plan(context, invalid)
 
 
@@ -207,3 +334,81 @@ def test_sanitized_trace_contains_metadata_not_event_payloads() -> None:
     assert trace.actor_counts == {"agent": 1}
     assert trace.confirmed_mechanisms == ["post_outcome"]
     assert trace.payloads_included is False
+
+
+async def test_public_github_gate_rejects_mutable_or_short_refs() -> None:
+    with pytest.raises(ValueError, match="full lowercase 40-character"):
+        await run_public_github_gate("https://github.com/Iguta/polygraph-ml", "main")
+
+
+async def test_public_github_gate_runs_immutable_manifest_audit(monkeypatch) -> None:
+    commit = "c" * 40
+
+    async def create_fixture_github_project(service, session, name, repository_url, ref):
+        del name
+        project = service.create_benchmark_project(session, POST_OUTCOME_BENCHMARK_ID)
+        project.source = ProjectSource(
+            type=SourceType.GITHUB,
+            repository_url=repository_url,
+            requested_ref=ref,
+            resolved_commit=ref,
+        )
+        for artifact_id in project.artifact_ids:
+            artifact = service.repository.get(Artifact, artifact_id)
+            assert artifact is not None
+            artifact.source_ref = f"github:fixtures/{artifact.filename}@{ref}"
+            service.repository.put(artifact)
+        manifest = Artifact(
+            artifact_id=new_id("art"),
+            project_id=project.project_id,
+            kind=ArtifactKind.MANIFEST,
+            filename=".polygraphml.yml",
+            sha256="d" * 64,
+            size_bytes=100,
+            media_type="application/yaml",
+            storage_key="fixture/manifest",
+            adapter="polygraphml-yaml",
+            adapter_status=AdapterStatus.SUPPORTED,
+            source_ref=f"github:.polygraphml.yml@{ref}",
+        )
+        service.repository.put(manifest)
+        project.artifact_ids.append(manifest.artifact_id)
+        return service.repository.put(project)
+
+    monkeypatch.setattr(
+        "polygraphml.services.projects.ProjectService.create_github_project",
+        create_fixture_github_project,
+    )
+    report = await run_public_github_gate(
+        "https://github.com/Iguta/polygraph-ml",
+        commit,
+        expected_pair="post_outcome:call_duration",
+    )
+
+    assert report.requested_commit == commit
+    assert report.resolved_commit == commit
+    assert report.confirmed_pairs == ["post_outcome:call_duration"]
+    assert report.corrected_metric < report.reproduced_metric
+    assert report.payloads_included is False
+
+
+def test_public_github_gate_report_requires_complete_sanitized_evidence() -> None:
+    report = PublicGitHubGateReport(
+        created_at=datetime.now(UTC),
+        repository_url="https://github.com/Iguta/polygraph-ml",
+        requested_commit="a" * 40,
+        resolved_commit="a" * 40,
+        artifact_count=5,
+        artifact_hashes={".polygraphml.yml": "b" * 64},
+        audit_status="complete",
+        event_count=20,
+        confirmed_pairs=["post_outcome:duration"],
+        metric="roc_auc",
+        reported_metric=0.871301,
+        reproduced_metric=0.8713005400607956,
+        corrected_metric=0.7330845871361364,
+    )
+    rendered = report.model_dump_json()
+    assert "access_token" not in rendered
+    assert report.payloads_included is False
+    assert report.sensitive_data_included is False

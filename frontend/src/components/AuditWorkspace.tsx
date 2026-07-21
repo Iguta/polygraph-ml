@@ -28,6 +28,8 @@ import type {
   MetricValue,
   Project,
   Question,
+  RepairBundle,
+  Version,
 } from "../types";
 
 interface Props {
@@ -36,8 +38,14 @@ interface Props {
   events: AuditEvent[];
   busy: boolean;
   report: string | null;
+  reportAudience: "technical" | "executive";
+  repair: RepairBundle | null;
+  eventTransport: "idle" | "sse" | "reconnecting" | "polling";
+  backendVersion: Version | null;
   onAnswer: (question: Question, answer: string) => void;
-  onReport: () => void;
+  onReport: (audience: "technical" | "executive") => void;
+  onRepair: () => void;
+  onDownloadRepair: () => void;
   onRestart: () => void;
 }
 
@@ -184,8 +192,14 @@ export function AuditWorkspace({
   events,
   busy,
   report,
+  reportAudience,
+  repair,
+  eventTransport,
+  backendVersion,
   onAnswer,
   onReport,
+  onRepair,
+  onDownloadRepair,
   onRestart,
 }: Props) {
   const complete = audit.status === "complete";
@@ -273,6 +287,13 @@ export function AuditWorkspace({
           <span>
             <strong>Your audit runs independently of this tab.</strong>{" "}
             Refreshing reconnects to event {audit.last_event_sequence}.
+            Transport:{" "}
+            {eventTransport === "polling"
+              ? "polling fallback"
+              : eventTransport === "reconnecting"
+                ? "reconnecting"
+                : "authenticated event stream"}
+            .
           </span>
         </div>
       )}
@@ -342,7 +363,25 @@ export function AuditWorkspace({
               <code>{project.source.resolved_commit.slice(0, 10)}…</code>
             )}
             <span>Evaluator model</span>
-            <strong>{audit.provenance.agent_model}</strong>
+            <strong>
+              {audit.provenance.agent_execution?.resolved_model ??
+                audit.provenance.agent_execution?.requested_model ??
+                "No model call recorded"}
+            </strong>
+            <span>Agent mode</span>
+            <strong>
+              {audit.provenance.agent_execution?.mode ?? "pending"}
+            </strong>
+            <span>Agent harness</span>
+            <strong>
+              {audit.provenance.agent_execution?.harness_version ?? "pending"}
+            </strong>
+            <span>Build</span>
+            <code>
+              {backendVersion
+                ? `${backendVersion.release_version} · ${backendVersion.build_sha.slice(0, 10)}`
+                : "unavailable"}
+            </code>
             <span>Seed</span>
             <strong>{audit.provenance.random_seed}</strong>
           </div>
@@ -358,7 +397,7 @@ export function AuditWorkspace({
                   : "What PolygraphML is establishing"}
               </h2>
             </div>
-            <span>{events.length} signed events</span>
+            <span>{events.length} durable events</span>
           </div>
 
           {visibleEvents.length === 0 && (
@@ -438,8 +477,8 @@ export function AuditWorkspace({
                       100
                     ).toFixed(1)}
                   </strong>{" "}
-                  AUC points of measured inflation after removing the
-                  unavailable feature.
+                  {comparison.metric.replaceAll("_", " ")} points of measured
+                  impact after removing the confirmed feature.
                 </p>
               )}
             </section>
@@ -494,21 +533,43 @@ export function AuditWorkspace({
               <button
                 className="button primary"
                 disabled={busy}
-                onClick={onReport}
+                onClick={() => onReport("executive")}
               >
                 {busy
                   ? "Generating…"
-                  : report
-                    ? "Report ready"
-                    : "Generate stakeholder report"}
+                  : report && reportAudience === "executive"
+                    ? "Executive brief ready"
+                    : "Generate executive brief"}
                 <FileCheck2 aria-hidden="true" />
+              </button>
+              <button
+                className="button secondary"
+                disabled={busy}
+                onClick={() => onReport("technical")}
+              >
+                <TerminalSquare aria-hidden="true" /> Generate technical report
               </button>
               <button
                 className="button secondary"
                 disabled={!report}
                 onClick={downloadReport}
               >
-                <Download aria-hidden="true" /> Download Markdown
+                <Download aria-hidden="true" /> Download {reportAudience}{" "}
+                Markdown
+              </button>
+              <button
+                className="button secondary"
+                disabled={busy || repair?.status === "unavailable"}
+                onClick={
+                  repair?.status === "available" ? onDownloadRepair : onRepair
+                }
+              >
+                <Download aria-hidden="true" />
+                {repair?.status === "available"
+                  ? "Download repair bundle"
+                  : repair?.status === "unavailable"
+                    ? "Repair unavailable"
+                    : "Build deterministic repair"}
               </button>
               <button className="button ghost" onClick={onRestart}>
                 <RotateCcw aria-hidden="true" /> Run another audit
@@ -517,10 +578,30 @@ export function AuditWorkspace({
           )}
           {report && (
             <section className="report-preview">
-              <p className="panel-label">Generated technical report</p>
-              <pre tabIndex={0} aria-label="Technical report content">
+              <p className="panel-label">Generated {reportAudience} report</p>
+              <pre tabIndex={0} aria-label={`${reportAudience} report content`}>
                 {report}
               </pre>
+            </section>
+          )}
+          {repair && (
+            <section
+              className={`repair-status ${repair.status}`}
+              aria-live="polite"
+            >
+              <FileCheck2 aria-hidden="true" />
+              <div>
+                <strong>
+                  {repair.status === "available"
+                    ? "Deterministic repair is ready"
+                    : "A safe repair could not be generated"}
+                </strong>
+                <p>
+                  {repair.status === "available"
+                    ? `${repair.size_bytes ?? 0} bytes · SHA-256 ${repair.sha256?.slice(0, 16)}…`
+                    : repair.limitations.join(" ")}
+                </p>
+              </div>
             </section>
           )}
         </div>
@@ -551,27 +632,29 @@ function QuestionCard({
           {question.options.map((option) => (
             <button
               key={option}
-              className={clsx(
-                "answer-button",
-                option === "after" && "recommended",
-              )}
+              className="answer-button"
               disabled={busy}
               onClick={() => onAnswer(question, option)}
             >
-              <span>
-                {option === "after"
-                  ? "Only after the call"
-                  : option === "before"
-                    ? "Available before selection"
-                    : "Not sure"}
-              </span>
-              {option === "after" && (
-                <small>Matches this benchmark scenario</small>
-              )}
+              <span>{answerLabel(option)}</span>
             </button>
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+function answerLabel(option: string): string {
+  return (
+    {
+      after: "Only after the event",
+      before: "Available before the decision",
+      depends: "Depends on the workflow",
+      unknown: "Not sure",
+      independent: "Independent input",
+      derived_from_target: "Derived from the target",
+      assigned_after_outcome: "Assigned after the outcome",
+    }[option] ?? option.replaceAll("_", " ")
   );
 }

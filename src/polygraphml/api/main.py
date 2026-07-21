@@ -10,20 +10,28 @@ import uvicorn
 from fastapi import Depends, FastAPI, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
+from polygraphml import __version__
 from polygraphml.api.container import AppContainer, build_container
 from polygraphml.api.dependencies import get_container, get_session, owned_audit, owned_project
 from polygraphml.api.schemas import (
     AnswerRequest,
+    AuditResponse,
     BenchmarkProjectRequest,
     CompleteUploadsRequest,
     CreateProjectRequest,
     MappingRequest,
     PresignRequest,
+    ProjectResponse,
+    ReadinessResponse,
+    RepairBundleResponse,
     ReportRequest,
     ScenarioRequest,
+    SessionResponse,
     StartAuditRequest,
+    SuccessEnvelope,
+    VersionResponse,
     success,
 )
 from polygraphml.config import Settings, get_settings
@@ -31,10 +39,14 @@ from polygraphml.domain.ids import new_id
 from polygraphml.domain.models import (
     Artifact,
     Audit,
+    AuditEvent,
+    AuditReport,
     AuditStatus,
+    BenchmarkDefinition,
     Finding,
     Project,
     Question,
+    RepairBundle,
     Session,
     SourceType,
 )
@@ -88,7 +100,7 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
 
     application = FastAPI(
         title="PolygraphML API",
-        version="0.1.0",
+        version=__version__,
         lifespan=lifespan,
         default_response_class=JSONResponse,
     )
@@ -139,7 +151,7 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @application.get("/readyz", include_in_schema=False)
+    @application.get("/readyz", include_in_schema=False, response_model=ReadinessResponse)
     async def ready(current: AppContainer = Depends(get_container)) -> dict[str, Any]:
         return {
             "status": "ready",
@@ -147,7 +159,18 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
             "live_agent_ready": current.settings.live_agent_ready,
         }
 
-    @application.post("/api/v1/sessions", status_code=201)
+    @application.get("/version", response_model=VersionResponse)
+    async def version(current: AppContainer = Depends(get_container)) -> VersionResponse:
+        return VersionResponse(
+            api_version="1.2",
+            release_version=current.settings.release_version,
+            build_sha=current.settings.build_sha,
+            evaluator_version=__version__,
+        )
+
+    @application.post(
+        "/api/v1/sessions", status_code=201, response_model=SuccessEnvelope[SessionResponse]
+    )
     async def create_session(current: AppContainer = Depends(get_container)) -> dict[str, Any]:
         session, token = current.repository.create_session(current.settings.session_ttl_seconds)
         return success(
@@ -161,13 +184,20 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
             }
         )
 
-    @application.get("/api/v1/benchmarks")
+    @application.get(
+        "/api/v1/benchmarks",
+        response_model=SuccessEnvelope[list[BenchmarkDefinition]],
+    )
     async def list_benchmarks(
         _: Session = Depends(get_session), current: AppContainer = Depends(get_container)
     ) -> dict[str, Any]:
         return success([item.model_dump(mode="json") for item in current.benchmarks.definitions()])
 
-    @application.post("/api/v1/projects/from-benchmark", status_code=201)
+    @application.post(
+        "/api/v1/projects/from-benchmark",
+        status_code=201,
+        response_model=SuccessEnvelope[ProjectResponse],
+    )
     async def project_from_benchmark(
         body: BenchmarkProjectRequest,
         session: Session = Depends(get_session),
@@ -176,7 +206,9 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
         project = current.projects.create_benchmark_project(session, body.benchmark_id)
         return success(project_payload(project, current))
 
-    @application.post("/api/v1/projects", status_code=201)
+    @application.post(
+        "/api/v1/projects", status_code=201, response_model=SuccessEnvelope[ProjectResponse]
+    )
     async def create_project_endpoint(
         body: CreateProjectRequest,
         session: Session = Depends(get_session),
@@ -247,7 +279,10 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
         current.projects.upload_content(project, artifact, content)
         return Response(status_code=204)
 
-    @application.post("/api/v1/projects/{project_id}/artifacts/complete")
+    @application.post(
+        "/api/v1/projects/{project_id}/artifacts/complete",
+        response_model=SuccessEnvelope[ProjectResponse],
+    )
     async def complete_artifacts(
         body: CompleteUploadsRequest,
         project: Project = Depends(owned_project),
@@ -256,14 +291,19 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
         updated = current.projects.complete_uploads(project, body.artifact_ids)
         return success(project_payload(updated, current))
 
-    @application.get("/api/v1/projects/{project_id}")
+    @application.get(
+        "/api/v1/projects/{project_id}", response_model=SuccessEnvelope[ProjectResponse]
+    )
     async def get_project_endpoint(
         project: Project = Depends(owned_project),
         current: AppContainer = Depends(get_container),
     ) -> dict[str, Any]:
         return success(project_payload(project, current))
 
-    @application.patch("/api/v1/projects/{project_id}/mapping")
+    @application.patch(
+        "/api/v1/projects/{project_id}/mapping",
+        response_model=SuccessEnvelope[ProjectResponse],
+    )
     async def update_mapping(
         body: MappingRequest,
         project: Project = Depends(owned_project),
@@ -272,7 +312,10 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
         updated = current.projects.update_mapping(project, body)
         return success(project_payload(updated, current))
 
-    @application.put("/api/v1/projects/{project_id}/scenario")
+    @application.put(
+        "/api/v1/projects/{project_id}/scenario",
+        response_model=SuccessEnvelope[ProjectResponse],
+    )
     async def update_scenario(
         body: ScenarioRequest,
         project: Project = Depends(owned_project),
@@ -281,7 +324,9 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
         updated = current.projects.add_scenario(project, body)
         return success(project_payload(updated, current))
 
-    @application.post("/api/v1/audits", status_code=202)
+    @application.post(
+        "/api/v1/audits", status_code=202, response_model=SuccessEnvelope[AuditResponse]
+    )
     async def start_audit(
         body: StartAuditRequest,
         idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=8)],
@@ -296,14 +341,17 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
         )
         return success(audit_payload(audit, current))
 
-    @application.get("/api/v1/audits/{audit_id}")
+    @application.get("/api/v1/audits/{audit_id}", response_model=SuccessEnvelope[AuditResponse])
     async def get_audit_endpoint(
         audit: Audit = Depends(owned_audit),
         current: AppContainer = Depends(get_container),
     ) -> dict[str, Any]:
         return success(audit_payload(audit, current))
 
-    @application.get("/api/v1/audits/{audit_id}/events")
+    @application.get(
+        "/api/v1/audits/{audit_id}/events",
+        responses={200: {"model": SuccessEnvelope[list[AuditEvent]]}},
+    )
     async def audit_events(
         request: Request,
         audit: Audit = Depends(owned_audit),
@@ -346,7 +394,11 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
 
         return StreamingResponse(stream(), media_type="text/event-stream")
 
-    @application.post("/api/v1/audits/{audit_id}/answers", status_code=202)
+    @application.post(
+        "/api/v1/audits/{audit_id}/answers",
+        status_code=202,
+        response_model=SuccessEnvelope[AuditResponse],
+    )
     async def answer_question(
         body: AnswerRequest,
         idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=8)],
@@ -360,7 +412,10 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
         updated = current.audits.answer(session, audit, question, body.answer, idempotency_key)
         return success(audit_payload(updated, current))
 
-    @application.post("/api/v1/audits/{audit_id}/report")
+    @application.post(
+        "/api/v1/audits/{audit_id}/report",
+        response_model=SuccessEnvelope[AuditReport],
+    )
     async def create_report(
         body: ReportRequest,
         audit: Audit = Depends(owned_audit),
@@ -371,6 +426,47 @@ def create_app(settings: Settings | None = None, container: AppContainer | None 
             raise PolygraphError("PROJECT_NOT_FOUND", "Project was not found.", 404)
         report = current.audits.create_report(audit, project, body.audience)
         return success(report.model_dump(mode="json"))
+
+    @application.post(
+        "/api/v1/audits/{audit_id}/repair-bundle",
+        response_model=SuccessEnvelope[RepairBundleResponse],
+    )
+    async def create_repair_bundle(
+        audit: Audit = Depends(owned_audit),
+        current: AppContainer = Depends(get_container),
+    ) -> dict[str, Any]:
+        project = current.repository.get(Project, audit.project_id)
+        if project is None:
+            raise PolygraphError("PROJECT_NOT_FOUND", "Project was not found.", 404)
+        bundle = current.repairs.create(audit, project)
+        payload = RepairBundleResponse(
+            **bundle.model_dump(), download_url=current.repairs.download_url(bundle)
+        )
+        return success(payload.model_dump(mode="json"))
+
+    @application.get(
+        "/api/v1/audits/{audit_id}/repair-bundle/{bundle_id}/download",
+        response_class=FileResponse,
+    )
+    async def download_repair_bundle(
+        bundle_id: str,
+        audit: Audit = Depends(owned_audit),
+        current: AppContainer = Depends(get_container),
+    ) -> FileResponse:
+        bundle = current.repository.get(RepairBundle, bundle_id)
+        if (
+            bundle is None
+            or bundle.audit_id != audit.audit_id
+            or bundle.status != "available"
+            or bundle.storage_key is None
+        ):
+            raise PolygraphError("REPAIR_NOT_FOUND", "Repair bundle was not found.", 404)
+        path = current.artifacts.path_for_key(bundle.storage_key)
+        return FileResponse(
+            path,
+            media_type="application/zip",
+            filename=f"polygraphml-{audit.audit_id}-repair.zip",
+        )
 
     @application.delete("/api/v1/projects/{project_id}", status_code=204)
     async def delete_project(

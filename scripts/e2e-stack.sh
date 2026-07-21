@@ -7,14 +7,18 @@ cd "${script_dir}/.."
 cleanup() {
   jobs -p | xargs -r kill
   rm -f "${api_log:-}" "${worker_log:-}"
+  if [[ -n "${e2e_data_root:-}" && -d "${e2e_data_root}" ]]; then
+    rm -rf -- "${e2e_data_root}"
+  fi
 }
 
 trap cleanup EXIT INT TERM
 
 export POLYGRAPHML_ENVIRONMENT=test
 export POLYGRAPHML_AGENT_MODE=fixture
-export POLYGRAPHML_DATABASE_PATH=.polygraphml-data/e2e.db
-export POLYGRAPHML_ARTIFACT_ROOT=.polygraphml-data/e2e-artifacts
+e2e_data_root="$(mktemp -d)"
+export POLYGRAPHML_DATABASE_PATH="${e2e_data_root}/e2e.db"
+export POLYGRAPHML_ARTIFACT_ROOT="${e2e_data_root}/artifacts"
 export POLYGRAPHML_WORKER_POLL_SECONDS=0.05
 
 # Prepare the environment before starting background processes.  Concurrent

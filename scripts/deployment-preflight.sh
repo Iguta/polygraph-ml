@@ -47,18 +47,22 @@ fi
 
 if uv run python - <<'PY' >/dev/null 2>&1
 from pathlib import Path
-from polygraphml.operations.live_trace import SanitizedLiveTrace
-path = Path("benchmark-results/live-trace.json")
-trace = SanitizedLiveTrace.model_validate_json(path.read_text())
-assert trace.mode == "live"
-assert trace.payloads_included is False
-assert trace.raw_chain_of_thought_stored is False
-assert trace.trace_include_sensitive_data is False
+from polygraphml.benchmarks.live_evaluate import LiveEvaluationResult
+path = Path("benchmark-results/live-evaluation.json")
+result = LiveEvaluationResult.model_validate_json(path.read_text())
+assert result.mode == "live"
+assert result.case_count == 3
+assert result.passed is True
+assert len(result.cases) == 3
+assert all(case.agent_mode == "live" and case.passed for case in result.cases)
+assert result.payloads_included is False
+assert result.raw_chain_of_thought_stored is False
+assert result.trace_include_sensitive_data is False
 PY
 then
-  report_check "sanitized real live trace" true
+  report_check "sanitized three-case live evaluation" true
 else
-  report_check "sanitized real live trace" false
+  report_check "sanitized three-case live evaluation" false
 fi
 
 if uv run python - <<'PY' >/dev/null 2>&1

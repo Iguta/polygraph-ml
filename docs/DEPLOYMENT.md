@@ -1,6 +1,6 @@
 # Deployment Runbook
 
-The production topology is React on Vercel and FastAPI plus one audit coordinator worker on AWS ECS Fargate. S3 stores artifacts, DynamoDB stores durable state and ordered events, and SQS/DLQ carries identifier-only jobs. Terraform defines the AWS resources. The current hackathon deployment is verified through public API/frontend health checks, a metadata-only public-path smoke audit, cold-start, refresh/replay, question/resume, controlled partial-failure/DLQ, and disposable deletion drills recorded in `docs/IMPLEMENTATION_PHASES.md`.
+The production topology is React on Vercel and FastAPI plus one audit coordinator worker on AWS ECS Fargate. S3 stores artifacts/repairs, DynamoDB stores durable state and ordered events, and SQS/DLQ carries identifier-only jobs. Terraform defines the AWS resources. The existing public deployment has historical smoke/resilience evidence; the v0.2 candidate is not deployed until frontend and backend expose the same reviewed release SHA.
 
 ## Prerequisites
 
@@ -11,17 +11,17 @@ The production topology is React on Vercel and FastAPI plus one audit coordinato
 - a Vercel project for `frontend/`;
 - a valid server-side OpenAI API key.
 
-Run `make deployment-preflight` at any time. It reports only pass/open booleans for the key, AWS/Vercel authentication, deployment variables, sanitized live trace, Git review state, and fixture benchmark gate; it never displays credential or account values.
+Run `make deployment-preflight` at any time. It reports only pass/open booleans for the key, AWS/Vercel authentication, deployment variables, sanitized three-case live evaluation, Git review state, deployed smoke, and fixture benchmark gate; it never displays credential or account values.
 
 ## 1. Bootstrap private registries and the secret
 
-Copy `infra/terraform/terraform.tfvars.example` to an ignored `.tfvars` file and replace account, hostname, zone, certificate, and origin placeholders. The all-zero image digests are bootstrap placeholders only.
+Copy `infra/terraform/terraform.tfvars.example` to an ignored `.tfvars` file and replace account, hostname, zone, certificate, origin, full 40-character `build_sha`, release version, and image placeholders. The all-zero SHA/image digests are bootstrap placeholders only.
 
 Initialize Terraform, then target only both ECR repositories and the Secrets Manager resource. Populate the secret value out of band; do not put it in Terraform variables, shell history, source files, build arguments, or Vercel.
 
 ## 2. Build and pin containers
 
-Build `Dockerfile.api` and `Dockerfile.worker`, push both images to their Terraform-created ECR repositories, and resolve their immutable repository digests. Replace both placeholder image values with URIs ending in `@sha256:<64 hex characters>`.
+Build `Dockerfile.api` and `Dockerfile.worker` with `BUILD_SHA` and `RELEASE_VERSION` arguments, push both images to their Terraform-created ECR repositories, and resolve their immutable repository digests. Replace both placeholder image values with URIs ending in `@sha256:<64 hex characters>`.
 
 Local image gates are:
 
@@ -46,19 +46,22 @@ Terraform configures encrypted/versioned S3 storage with seven-day retention by 
 
 ## 4. Deploy Vercel
 
-Import `frontend/` as the Vercel project root. Set `VITE_API_URL` to the Terraform `api_url` output and ensure `POLYGRAPHML_CORS_ORIGINS` matches the final Vercel origin before applying AWS. Build with `npm run build`; `frontend/vercel.json` supplies the single-page-app rewrite.
+Import `frontend/` as the Vercel project root. Set `VITE_API_URL` to the Terraform `api_url` output and `VITE_BUILD_SHA` to the exact release commit; ensure `POLYGRAPHML_CORS_ORIGINS` matches the final Vercel origin before applying AWS. Build with `npm run build`; `frontend/vercel.json` supplies the single-page-app rewrite.
 
 ## 5. Production verification
 
 Do not mark deployment complete until all of these are recorded against the public path:
 
 - `/healthz` and `/readyz` succeed over TLS;
+- `/version` returns release `0.2.0` and the exact same 40-character SHA shown by the frontend;
 - a safe direct S3 upload completes without sending the session bearer token to S3;
 - an audit survives browser refresh and resumes exactly once after a human answer;
 - a deliberately exhausted retry reaches the DLQ and fires the alarm;
 - deleting a disposable project removes state and artifacts;
 - worktree and Git history secret scans pass;
 - a real live-agent trace is sanitized and contains no raw chain-of-thought, artifact bytes, key, or presigned URL.
+- the root `.polygraphml.yml` flagship imports from the public repository at its immutable release SHA;
+- the flagship repair bundle downloads through a short-lived S3 URL and matches its declared SHA-256.
 
 ## Pull-request review gate
 
@@ -68,13 +71,14 @@ Before enabling merges, add the repository Actions secret `OPENAI_API_KEY` and c
 
 The repository is public, so GitHub branch protection can require the `gpt-5.6-terra` status check before merging to `dev`.
 
-Run the live smoke recorder only after configuring the ignored local key:
+Run the bounded live gate only after expectations are committed and the ignored local key is configured:
 
 ```bash
-make live-smoke
+REF=<40-character-commit-sha> make public-github-gate
+make eval-live
 ```
 
-It refuses fixture degradation and writes only model/audit identifiers, status, event/actor counts, confirmed mechanism names, and explicit redaction-policy flags to `benchmark-results/live-trace.json`. It never writes event payloads, prompts, sample values, reasoning text, or the key. Inspect the file before committing it.
+The first command proves the strict root manifest, artifact hashes, immutable public-repository import, complete audit, and question/resume path. The second runs exactly the flagship, semantic proxy, and hard negative once each, refuses to pass fixture degradation, and writes only benchmark/result pairs, model/tool-loop metadata, token/latency counts, trace/request identifiers, and explicit redaction-policy flags to `benchmark-results/live-evaluation.json`. Neither command writes event payloads, prompts, sample values, reasoning text, or the key. Do not rerun or broaden the live sweep without explicit cost approval.
 
 To verify the deployed API, SQS worker, question/resume flow, event replay, and deletion boundary together, run a disposable benchmark audit:
 
@@ -84,7 +88,11 @@ API_URL=https://api.example.com make deployed-smoke
 
 The result is metadata-only evidence in `benchmark-results/deployed-smoke.json`. The command deletes its disposable project even on a failed run; it never records the session token, event payloads, dataset values, prompts, or credentials.
 
-After at least 20 deployed live audits, export their per-audit durations in the benchmark result shape and rerun `polygraphml-queue-calibration` with `mode: live`. Update the Terraform visibility timeout only from that captured recommendation.
+After deploying the materially larger flagship workload and capturing at least 20 deployed live audits, export their per-audit durations in the benchmark result shape and rerun `polygraphml-queue-calibration` with `mode: live`. The historical 20-run calibration predates v0.2; update the Terraform visibility timeout only from the new captured recommendation.
+
+## Final credential rotation
+
+Immediately before submission, rotate the OpenAI key, update both the ignored local `.env` and the Secrets Manager JSON field `OPENAI_API_KEY` without printing either value, force a new worker deployment, and rerun secret/history scanning plus one bounded deployed smoke. This rotation is an owner action because it changes external credentials; it must not be automated through source or Terraform state.
 
 ## Retention and deletion
 

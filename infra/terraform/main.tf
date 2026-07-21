@@ -21,6 +21,8 @@ locals {
     { name = "POLYGRAPHML_CORS_ORIGINS", value = jsonencode(split(",", var.cors_origins)) },
     { name = "POLYGRAPHML_ARTIFACT_ROOT", value = "/data/artifacts" },
     { name = "POLYGRAPHML_WORKER_LEASE_SECONDS", value = tostring(var.queue_visibility_seconds) },
+    { name = "POLYGRAPHML_RELEASE_VERSION", value = var.release_version },
+    { name = "POLYGRAPHML_BUILD_SHA", value = var.build_sha },
     { name = "OPENAI_MODEL", value = "gpt-5.6-sol" }
   ]
 }
@@ -243,7 +245,7 @@ resource "aws_iam_role_policy" "api" {
     Version = "2012-10-17"
     Statement = [
       { Effect = "Allow", Action = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem", "dynamodb:BatchWriteItem", "dynamodb:Query", "dynamodb:Scan", "dynamodb:TransactWriteItems"], Resource = [aws_dynamodb_table.state.arn, "${aws_dynamodb_table.state.arn}/index/*"] },
-      { Effect = "Allow", Action = ["s3:PutObject", "s3:DeleteObject", "s3:ListBucket"], Resource = [aws_s3_bucket.artifacts.arn, "${aws_s3_bucket.artifacts.arn}/*"] },
+      { Effect = "Allow", Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"], Resource = [aws_s3_bucket.artifacts.arn, "${aws_s3_bucket.artifacts.arn}/*"] },
       { Effect = "Allow", Action = ["sqs:SendMessage", "sqs:GetQueueAttributes"], Resource = aws_sqs_queue.audit.arn }
     ]
   })

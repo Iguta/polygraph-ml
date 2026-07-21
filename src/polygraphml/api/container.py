@@ -7,6 +7,7 @@ from polygraphml.config import Settings
 from polygraphml.queueing import AuditQueue, LocalAuditQueue, SqsAuditQueue
 from polygraphml.services.audits import AuditService
 from polygraphml.services.projects import ProjectService
+from polygraphml.services.repairs import RepairService
 from polygraphml.storage.artifacts import ArtifactStore, LocalArtifactStore, S3ArtifactStore
 from polygraphml.storage.base import DomainRepository
 from polygraphml.storage.dynamodb import DynamoRepository
@@ -21,6 +22,7 @@ class AppContainer:
     queue: AuditQueue
     projects: ProjectService
     audits: AuditService
+    repairs: RepairService
     benchmarks: BenchmarkCatalog
 
 
@@ -62,5 +64,6 @@ def build_container(settings: Settings) -> AppContainer:
         queue=queue,
         projects=ProjectService(settings, repository, artifacts, benchmarks),
         audits=AuditService(repository, queue),
+        repairs=RepairService(repository, artifacts, settings.max_artifact_bytes),
         benchmarks=benchmarks,
     )

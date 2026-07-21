@@ -1,6 +1,6 @@
 # Product Roadmap — PolygraphML
 
-**Version:** 1.0 · **Owner:** David · **Date:** July 18, 2026
+**Version:** 1.1 · **Owner:** David · **Date:** July 21, 2026
 
 ## Roadmap principle
 
@@ -18,8 +18,9 @@ Product scope:
 - CSV/Parquet and Jupyter notebook inspection;
 - one GPT-5.6 Sol audit agent with follow-up questions;
 - reported/reproduced/corrected metrics;
-- post-outcome/availability, exact/group contamination, preprocessing-order, and ablation/correction probes, with proxy, temporal backtesting, metric-contract equivalence, and near-duplicate similarity shown as explicit limitations;
-- Decision Trace, technical verdict, and Markdown stakeholder report;
+- post-outcome/availability, semantic target-proxy, metric-contract, exact/group contamination, preprocessing-order, held-out association, and ablation/correction probes; temporal backtesting and near-duplicate similarity remain explicit limitations;
+- strict `.polygraphml.yml` repository manifests and bounded, non-sandboxed `.skops` compute;
+- Decision Trace, technical/executive Markdown reports, and a deterministic repair archive;
 - React/Vercel frontend and AWS/SQS backend;
 - synthetic planted-leak suite, clean control, and one pinned public benchmark.
 
@@ -34,7 +35,7 @@ Exit evidence is defined in [IMPLEMENTATION_PHASES.md](IMPLEMENTATION_PHASES.md)
 - broader scikit-learn estimator coverage, XGBoost, LightGBM, CatBoost, ONNX, and MLflow model bundles;
 - regression and multiclass evaluation;
 - robust grouped, nested, and time-series cross-validation reconstruction;
-- downloadable reproducibility bundle with corrected notebook/patch suggestions;
+- broader reproducibility bundles for dynamic pipelines beyond the shipped literal-feature patch boundary;
 - team projects, durable history, shareable review links, comments, and approval states;
 - benchmark dashboard showing quality, latency, and cost by release;
 - a broader curated public case library; the initial licensed UCI COVID-19 surveillance clean control is shipped, while any clinical-scale COVID reproduction requires separate provenance and claim validation.

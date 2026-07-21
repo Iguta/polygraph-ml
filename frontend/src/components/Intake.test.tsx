@@ -28,7 +28,7 @@ describe("Intake", () => {
     ).toBeVisible();
     expect(screen.getByText(/pickle files are rejected/i)).toBeVisible();
     await user.click(
-      screen.getByRole("button", { name: /run the guided benchmark/i }),
+      screen.getByRole("button", { name: /run the flagship audit/i }),
     );
     expect(benchmark).toHaveBeenCalledOnce();
   });

@@ -5,7 +5,9 @@ import type {
   Mapping,
   Project,
   Readiness,
+  RepairBundle,
   Scenario,
+  Version,
 } from "./types";
 
 const API_ROOT =
@@ -77,6 +79,16 @@ export const api = {
       throw new ApiError("API is not ready.", "NOT_READY", response.status);
     return (await response.json()) as Readiness;
   },
+  version: async (): Promise<Version> => {
+    const response = await fetch(`${API_ROOT}/version`);
+    if (!response.ok)
+      throw new ApiError(
+        "Version metadata is unavailable.",
+        "NOT_READY",
+        response.status,
+      );
+    return (await response.json()) as Version;
+  },
   benchmarkProject: (benchmarkId = "synthetic_campaign_leak_v1") =>
     request<Project>("/api/v1/projects/from-benchmark", {
       method: "POST",
@@ -125,6 +137,52 @@ export const api = {
         headers: { Accept: "application/json" },
       },
     ),
+  streamEvents: async (
+    auditId: string,
+    afterSequence: number,
+    lastEventId: string | null,
+    onEvent: (event: AuditEvent) => void,
+    signal: AbortSignal,
+  ): Promise<void> => {
+    const token = await ensureSession();
+    const headers = new Headers({
+      Accept: "text/event-stream",
+      Authorization: `Bearer ${token}`,
+    });
+    if (lastEventId) headers.set("Last-Event-ID", lastEventId);
+    const response = await fetch(
+      `${API_ROOT}/api/v1/audits/${auditId}/events?after_sequence=${afterSequence}`,
+      { headers, signal },
+    );
+    if (!response.ok || !response.body)
+      throw new ApiError(
+        "Decision Trace stream is unavailable.",
+        "EVENT_STREAM_FAILED",
+        response.status,
+      );
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder
+        .decode(value, { stream: !done })
+        .replaceAll("\r\n", "\n");
+      let boundary = buffer.indexOf("\n\n");
+      while (boundary >= 0) {
+        const frame = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const data = frame
+          .split("\n")
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).trimStart())
+          .join("\n");
+        if (data) onEvent(JSON.parse(data) as AuditEvent);
+        boundary = buffer.indexOf("\n\n");
+      }
+      if (done) return;
+    }
+  },
   answer: (auditId: string, questionId: string, answer: string) =>
     request<Audit>(`/api/v1/audits/${auditId}/answers`, {
       method: "POST",
@@ -139,6 +197,31 @@ export const api = {
         body: JSON.stringify({ audience, format: "markdown" }),
       },
     ),
+  repairBundle: (auditId: string) =>
+    request<RepairBundle>(`/api/v1/audits/${auditId}/repair-bundle`, {
+      method: "POST",
+    }),
+  downloadRepair: async (url: string): Promise<Blob> => {
+    const isLocalApiDownload = url.startsWith("/");
+    const headers = new Headers();
+    if (isLocalApiDownload) {
+      const token = await ensureSession();
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+    const response = await fetch(
+      isLocalApiDownload ? `${API_ROOT}${url}` : url,
+      {
+        headers,
+      },
+    );
+    if (!response.ok)
+      throw new ApiError(
+        "Repair bundle download failed.",
+        "REPAIR_DOWNLOAD_FAILED",
+        response.status,
+      );
+    return response.blob();
+  },
   declareUploads: (projectId: string, artifacts: Record<string, unknown>[]) =>
     request<{
       uploads: Array<{
