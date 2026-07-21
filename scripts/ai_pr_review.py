@@ -24,14 +24,20 @@ MAX_OMITTED_ARTIFACT_BYTES = 10 * 1024 * 1024
 MAX_MANIFEST_BYTES = 256 * 1024
 HTTP_TIMEOUT_SECONDS = 90
 REVIEW_NONEXECUTABLE_ARTIFACTS = {
-    "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.csv": (
-        "non-executable public benchmark table; exact hash is pinned in the root manifest "
-        "and its deterministic generator, derivation record, and benchmark tests are reviewed"
-    ),
-    "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops": (
-        "non-source model artifact; exact hash is pinned in the root manifest and the safe "
-        "adapter inspects untrusted types before loading"
-    ),
+    "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_evaluation.csv": {
+        "sha256": "060671f9dcf10dbf76cda0dec39e8ab1b9c0787c4b93e31f1ca7fab95c508b39",
+        "rationale": (
+            "non-executable public benchmark table; base policy pins the release digest and "
+            "the deterministic generator, derivation record, and benchmark tests are reviewed"
+        ),
+    },
+    "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops": {
+        "sha256": "5c23908310184d18ce20f5a40cd2f16e19455ff7c9029d5fa86268b0e3ac8d90",
+        "rationale": (
+            "non-source model artifact; base policy pins the release digest and the safe "
+            "adapter inspects untrusted types before loading"
+        ),
+    },
 }
 SUSPICIOUS_CONTENT = re.compile(
     r"(?:sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----)",
@@ -147,6 +153,9 @@ def inspect_omitted_artifact(
         raise RuntimeError("Unexpected omitted artifact path.")
     if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256):
         raise RuntimeError("Reviewed manifest did not contain a valid artifact SHA-256.")
+    anchored_sha256 = REVIEW_NONEXECUTABLE_ARTIFACTS[filename]["sha256"]
+    if expected_sha256 != anchored_sha256:
+        raise RuntimeError("Reviewed manifest digest did not match the trusted base policy.")
     content = fetch_git_blob(repository, blob_sha, token, MAX_OMITTED_ARTIFACT_BYTES)
     actual_sha256 = hashlib.sha256(content).hexdigest()
     if actual_sha256 != expected_sha256:
@@ -224,9 +233,9 @@ def collect_diff(repository: str, pull_number: int, token: str) -> tuple[list[st
             entry = (
                 f"\n--- {filename}\n"
                 "[Binary/large non-executable content omitted by the trusted review policy. "
-                f"Rationale: {REVIEW_NONEXECUTABLE_ARTIFACTS[filename]}. "
+                f"Rationale: {REVIEW_NONEXECUTABLE_ARTIFACTS[filename]['rationale']}. "
                 f"Fetched immutable blob SHA-256={sha256}; matched the reviewed root manifest; "
-                "credential scan passed. "
+                "matched the pre-existing base-policy digest; credential scan passed. "
                 f"status={changed_file.get('status', 'unknown')} "
                 f"additions={changed_file.get('additions', 'unknown')} "
                 f"deletions={changed_file.get('deletions', 'unknown')}]\n"

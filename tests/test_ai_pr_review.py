@@ -85,6 +85,11 @@ def test_collect_diff_inventories_non_executable_artifact_without_truncating(
     artifact = b"safe model bytes"
     artifact_path = "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops"
     artifact_sha256 = hashlib.sha256(artifact).hexdigest()
+    monkeypatch.setitem(
+        reviewer.REVIEW_NONEXECUTABLE_ARTIFACTS[artifact_path],
+        "sha256",
+        artifact_sha256,
+    )
     manifest = (
         f"provenance:\n  artifact_hashes:\n    {artifact_path}: {artifact_sha256}\n"
     ).encode()
@@ -134,6 +139,7 @@ def test_collect_diff_inventories_non_executable_artifact_without_truncating(
     assert "Binary/large non-executable content omitted" in chunks[0]
     assert "safe adapter inspects untrusted types" in chunks[0]
     assert "matched the reviewed root manifest" in chunks[0]
+    assert "matched the pre-existing base-policy digest" in chunks[0]
     assert "credential scan passed" in chunks[0]
     assert "src/reviewable.py" in chunks[0]
 
@@ -162,6 +168,13 @@ def test_collect_diff_reviews_allowlisted_text_when_github_supplies_patch(monkey
 
 def test_omitted_artifact_fails_closed_on_credential_material(monkeypatch) -> None:
     artifact = b"OPENAI_API_KEY=sk-" + b"a" * 30
+    path = "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops"
+    artifact_sha256 = hashlib.sha256(artifact).hexdigest()
+    monkeypatch.setitem(
+        reviewer.REVIEW_NONEXECUTABLE_ARTIFACTS[path],
+        "sha256",
+        artifact_sha256,
+    )
     monkeypatch.setattr(
         reviewer,
         "github_api",
@@ -175,9 +188,9 @@ def test_omitted_artifact_fails_closed_on_credential_material(monkeypatch) -> No
     try:
         reviewer.inspect_omitted_artifact(
             "owner/repo",
-            "src/polygraphml/benchmarks/data/uci_bank/bank_marketing_model.skops",
+            path,
             "b" * 40,
-            hashlib.sha256(artifact).hexdigest(),
+            artifact_sha256,
             "token",
         )
     except RuntimeError as exc:
@@ -186,7 +199,7 @@ def test_omitted_artifact_fails_closed_on_credential_material(monkeypatch) -> No
         raise AssertionError("Credential material must fail the omitted-artifact review.")
 
 
-def test_omitted_artifact_must_match_reviewed_manifest_digest(monkeypatch) -> None:
+def test_omitted_artifact_requires_base_anchored_manifest_digest(monkeypatch) -> None:
     artifact = b"safe model bytes"
     monkeypatch.setattr(
         reviewer,
@@ -207,9 +220,9 @@ def test_omitted_artifact_must_match_reviewed_manifest_digest(monkeypatch) -> No
             "token",
         )
     except RuntimeError as exc:
-        assert "reviewed manifest SHA-256" in str(exc)
+        assert "trusted base policy" in str(exc)
     else:
-        raise AssertionError("An omitted artifact must match its reviewed manifest digest.")
+        raise AssertionError("An omitted artifact must use the base-anchored digest.")
 
 
 def test_collect_diff_fails_closed_for_unexpected_binary(monkeypatch) -> None:
