@@ -70,7 +70,7 @@ The release must prove three things in under three minutes:
 
 #### Definition of Done
 
-- [ ] Expected findings and prohibited claims are committed before any live evaluation.
+- [x] Expected findings and prohibited claims are committed before any live evaluation (`16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`).
 - [ ] The UCI benchmark imports through the public GitHub path at a pinned SHA and completes end to end.
 - [x] GitHub ref, tree, size, manifest, download-failure, traversal, and idempotency paths have automated tests.
 - [x] A pathological estimator times out visibly as `inconclusive` without killing the worker.

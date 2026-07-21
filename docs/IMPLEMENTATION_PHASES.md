@@ -149,7 +149,7 @@ Archive policy: archive formats are rejected at the extension allowlist, so an a
 - [x] At least one multi-mechanism synthetic case passes.
 - [x] At least one fully clean control has zero confirmed findings.
 - [x] One public model + dataset + notebook/repository benchmark completes end to end.
-- [ ] The new v0.2 expectations and prohibited claims are committed before `make eval-live`; the working-tree registry is implemented but not yet committed.
+- [x] The new v0.2 expectations and prohibited claims were committed at `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5` before `make eval-live`.
 - [x] Raw case/pair counts, Wilson intervals, precision/recall, false confirmations, question usefulness, schema failures, degradation, reproduction/correction error, latency, token usage, and cost are reported.
 - [x] Public benchmark license and provenance are reviewable from the UI or repository.
 - [x] COVID-19 case is included only if reproducibility and licensing gates pass; otherwise it remains explicitly roadmap.
@@ -199,7 +199,7 @@ This table distinguishes the current uncommitted v0.2 candidate from historical 
 
 | Owner | Open gate | Why it remains open | Required evidence |
 |---|---|---|---|
-| Codex + David | Expectation commit/public import | New manifest and benchmark expectations are still working-tree changes | Reviewed commit SHA, then successful GitHub import of that exact SHA |
+| Codex + David | Public import | Manifest and benchmark expectations are committed at `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5`, but that commit is not yet published for GitHub import | Successful GitHub import of the published exact SHA |
 | Codex + David | Three-case live gate | Running it earlier would violate the precommit rule and spend the bounded budget before the harness is final | One sanitized `live-evaluation.json` containing exactly three non-degraded cases |
 | Codex + David | v0.2 deployment | Current public URLs serve the earlier slice | Same release SHA in Vercel badge and backend `/version`, pinned ECR digests, public smoke evidence |
 | David | Credential rotation | Must occur immediately before the final deployment per the approved plan | Rotated local/Secrets Manager key without exposing its value, then worker redeployment and scans |
@@ -207,10 +207,10 @@ This table distinguishes the current uncommitted v0.2 candidate from historical 
 
 ## Next release actions
 
-1. Finish docs/contracts and run the complete local release gate.
-2. Commit and publish the expectation-bearing candidate for review.
-3. Import the flagship through the public GitHub API at that immutable SHA.
-4. Run `make eval-live` exactly once, then open the PR to `dev` for CI and GPT-5.6 Terra review.
+1. Publish the committed expectation-bearing candidate for review.
+2. Import the flagship through the public GitHub API at that immutable SHA.
+3. Run `make eval-live` exactly once and commit both sanitized gate records.
+4. Open the PR to `dev` and let clean-checkout CI plus GPT-5.6 Terra review the exact candidate.
 5. Merge through `dev` to `main`, tag `v0.2.0`, deploy one SHA/digest, rotate the key, and repeat public smoke/security checks.
 6. Record and verify the live demo, labeled fixture fallback, and submission metadata.
 

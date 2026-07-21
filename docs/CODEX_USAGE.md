@@ -12,10 +12,11 @@ This is an evidence log for the OpenAI Build Week submission. It must describe c
 - Implementation commit: `0d8f00caefb6150ff3d86d30396c478a030612d9` (`feat: ship PolygraphML audit platform`).
 - Release-branch CI hardening: `2e3ee05`, `fa11d28`, `f738301`, and `e924c84`.
 - Review PR: [#1 — prior `agent/polygraphml-release` release](https://github.com/Iguta/polygraph-ml/pull/1), merged at `22660b7` and present on both `origin/dev` and `origin/main`. The v0.2 candidate is on `agent/hackathon-winning-slice` and has no PR yet.
+- v0.2 expectation-bearing implementation commit: `16dd4c659f4f7f36507d40ff60fbc9280cb82cc5` (`feat: ship hackathon-winning evidence slice`), created before any v0.2 live evaluation.
 
 ## Current repository state
 
-As of July 21, 2026, the earlier vertical slice is deployed at `polygraphml.davidiguta.com`, but the current uncommitted `v0.2.0` candidate is a materially larger local change and must not be confused with that deployment. The candidate adds a typed multi-mechanism agent contract, strict root manifest, full UCI Bank Marketing flagship, bounded child compute, semantic proxy/hard negative, benchmark schema v2, real executive/technical reports, deterministic repair bundles, generated frontend contracts, authenticated SSE/replay/fallback, and exact build provenance. The 82-test backend suite, static checks, frontend unit/build gates, seven-case fixture gate, Terraform validation, two candidate container builds, and six-test Playwright suite pass locally. Public immutable-SHA import, the exactly three live evaluations, clean-checkout CI/Terra review, v0.2 deployment, credential rotation, and both recordings remain open.
+As of July 21, 2026, the earlier vertical slice is deployed at `polygraphml.davidiguta.com`, but the committed, not-yet-published `v0.2.0` candidate is a materially larger change and must not be confused with that deployment. The candidate adds a typed multi-mechanism agent contract, strict root manifest, full UCI Bank Marketing flagship, bounded child compute, semantic proxy/hard negative, benchmark schema v2, real executive/technical reports, deterministic repair bundles, generated frontend contracts, authenticated SSE/replay/fallback, and exact build provenance. The 82-test backend suite, static checks, frontend unit/build gates, seven-case fixture gate, Terraform validation, two candidate container builds, and six-test Playwright suite pass locally. Public immutable-SHA import, the exactly three live evaluations, clean-checkout CI/Terra review, v0.2 deployment, credential rotation, and both recordings remain open.
 
 ## Completed Codex work
 
@@ -109,7 +110,7 @@ Codex added a measured queue-timing calibrator, a fail-closed historical live-sm
 
 ## Remaining submission work
 
-- Commit the new expectations, import the flagship through public GitHub at that immutable SHA, and run `make eval-live` exactly once.
+- Publish the expectation commit, import the flagship through public GitHub at that immutable SHA, and run `make eval-live` exactly once.
 - Open the v0.2 PR to `dev`, pass clean-checkout CI and GPT-5.6 Terra review, merge through `main`, and tag `v0.2.0`.
 - Deploy frontend/backend from one SHA and pinned digests; repeat public smoke, repair download, replay/resume, deletion, and resilience gates.
 - Rotate the OpenAI key, update Secrets Manager/local ignored configuration, redeploy the worker, and repeat secret/history scanning.
